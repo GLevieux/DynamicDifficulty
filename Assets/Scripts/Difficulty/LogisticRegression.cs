@@ -301,12 +301,44 @@ class LogisticRegression
             Betas = new double[0];
         }
 
+        public bool isUsable()
+        {
+            return (Betas != null);
+        }
+
+        public void saveBetasToCsv(string csvFile)
+        {
+            try
+            {
+                FileStream ofs = new FileStream(csvFile, FileMode.Append);
+
+                StreamWriter sw = new StreamWriter(ofs);
+
+                for (int i=0;i<Betas.Length;i++)
+                {
+                    sw.Write(Betas[i]);
+                    if(i<Betas.Length-1)
+                        sw.Write(";");
+                }
+                sw.Write("\n");
+                sw.Flush();
+                ofs.Flush();
+                sw.Close();
+                ofs.Close();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        //Attention : PROBA DE SUCCES, pas difficulté
         public double Predict(double[] values)
         {
             // p = 1 / (1 + exp(-z) where z = b0x0 + b1x1 + b2x2 + b3x3 + . . .
 
-            if (values.Length != Betas.Length-1)
-                throw new Exception("Impossible to predict, not good number of variables");
+            if (Betas == null || values.Length != Betas.Length-1)
+                throw new Exception("Impossible to predict, no betas yet or not good number of variables");
 
             double result = 0; // ex: if xMatrix is size 10 x 4 and bVector is 4 x 1 then prob vector is 10 x 1 (one prob for every row of xMatrix)
 
@@ -327,11 +359,18 @@ class LogisticRegression
 
         //trouve le bon params xi pour une proba donnée et toutes les variables xj(j!=i) fixées sauf une (sinon pas de res)
         //xi = ( (-ln(1/p -1) - (b(j!=i)x(j!=i)) ) / bi;
+        //Attention : PROBA DE SUCCES, pas difficulté
+        //Attention, n'écrit pas dans values !!  regarder le retour
         public double InvPredict(double proba, double [] values = null, int varToSet = 0)
         {
             double valueXi = 0;
 
-            if (Betas.Length == 0)
+            if(proba > 1 || proba < 0)
+            {
+                Console.WriteLine("WARNING : proba " + proba + "is not 0-1 so model is going to crash");
+            }
+             
+            if (Betas == null || Betas.Length == 0)
                 return 0.0f;
 
             double sommeBjXjNotI = 1.0 * Betas[0]; // b0(1.0)
@@ -339,7 +378,7 @@ class LogisticRegression
             //Si une seule vairable, on fait direct la prédiction , pas besoin de bloquer les autres
             if(Betas.Length == 2)
             {
-                valueXi = ((-Math.Log(1.0 / proba) - sommeBjXjNotI)) / Betas[1];
+                valueXi = ((-Math.Log(1.0 / proba - 1) - sommeBjXjNotI)) / Betas[1];
             }
             else
             {

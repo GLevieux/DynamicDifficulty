@@ -36,6 +36,7 @@ public class TankAI : MonoBehaviour {
         {
             coolDownVariabilityDir = 1.0f;
             dirVariability = Random.onUnitSphere;
+            dirVariability.y = 0;
         }
 
         //On détermine ou il veut aller
@@ -49,11 +50,8 @@ public class TankAI : MonoBehaviour {
                 Vector3 dirToOtherAi = (transform.position - ennemies[i].position);
                 float dist = dirToOtherAi.magnitude;
                 repulsion += (dirToOtherAi.normalized * 40) / dist;
-            }
-                
-        }
-
-        
+            }              
+        }        
 
         //Calcul des params de shoot si le joueur ne bougeait pas
         float distance = (transform.GetComponent<Complete.TankShooting>().m_FireTransform.position - player.position).magnitude;
@@ -66,10 +64,18 @@ public class TankAI : MonoBehaviour {
         Vector3 nextPos = player.transform.position + (player.GetComponent<Complete.TankMovement>().m_Speed *
             player.GetComponent<Complete.TankMovement>().m_MovementInputValue * time * player.transform.forward);
 
+        //On perturbe cette prochaine position en fonction de la qualité de l'ia
+        Vector3 perturbation = dirVariability;
+        perturbation.y = 0;
+        perturbation *= Mathf.Clamp01(1 - precision) * 15;
+        nextPos += perturbation;
+
         //On se base sur la prochaine position
         distance = (nextPos - transform.position).magnitude;
 
-				Vector3 dirPoint = nextPos + repulsion + dirVariability * 2.0f;
+        Vector3 dirNextPos = (nextPos - transform.position).normalized;
+
+        Vector3 dirPoint = nextPos + repulsion;
         float angle = Vector3.SignedAngle(transform.forward, dirPoint - transform.position, Vector3.up);
         tm.m_TurnInputValue = angle/50 * speedTurn;
         tm.m_MovementInputValue = speedMove;
@@ -88,7 +94,6 @@ public class TankAI : MonoBehaviour {
                     tooClose = true;
                 }
             }
-
         }
 
         if (Mathf.Abs(angle) < 5 && cooldownShot <= 0 && !tooClose)
@@ -98,11 +103,8 @@ public class TankAI : MonoBehaviour {
             speed = Mathf.Sqrt((distance / (Mathf.Sin(2 * theta))) * g);
             
             ts.m_CurrentLaunchForce = Mathf.Max(15.0f, speed);
-            ts.Fire();
+            ts.Fire(false, dirNextPos);
             cooldownShot = timeBetweenShot;
         }
-            
-
-
     }
 }

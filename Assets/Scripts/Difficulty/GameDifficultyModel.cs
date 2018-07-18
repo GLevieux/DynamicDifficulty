@@ -25,7 +25,8 @@ public class GameDifficultyModel : MonoBehaviour
     bool AccuracyUpToDate = false;
     List<double[]> Tries;
     List<double> Results;
-    string FileName = "data.csv";
+    string FileDataName = "data.csv";
+    string FileModelName = "model.csv";    
     bool ProfileSet = false;
     
     /**
@@ -76,7 +77,8 @@ public class GameDifficultyModel : MonoBehaviour
      */
     public void setProfile(string userId, string activityId)
     {
-        FileName = userId + "_" + activityId + ".csv";
+        FileDataName = userId + "_" + activityId + ".csv";
+        FileModelName = userId + "_" + activityId + "_model.csv";
         ProfileSet = true;
         loadFromDisk();
         updateModel(true);
@@ -139,6 +141,7 @@ public class GameDifficultyModel : MonoBehaviour
         if (!ProfileSet)
             throw new Exception("predictDifficulty but no profile set");
 
+        probaFail = System.Math.Min(1.0, System.Math.Max(0, probaFail));
         return Model.InvPredict(1.0-probaFail, vars, varToSet);
     }
 
@@ -194,6 +197,33 @@ public class GameDifficultyModel : MonoBehaviour
 
         //Using all data to update model
         Model = LogisticRegression.ComputeModel(data);
+
+        if (!Model.isUsable())
+            return;
+
+        //On vérifie si on a pas des soucis de modèle complètement dans les choux
+        //Prédiction de difficulté doit marcher dans les deux sens
+        double errorSum = 0;
+        double diffTest = 0;
+        double [] pars = new double[1];
+        string res = "";
+        for (int i = 0; i < 10; i++)
+        {
+            pars[0] = Model.InvPredict(diffTest,pars,0); //on regarde que la première variable.
+            res = "Diff = " + diffTest + " par = " + pars[0];
+            errorSum += System.Math.Abs(diffTest - Model.Predict(pars)); //On passe dans les deux sens on doit avoir pareil
+            res += " res = " + Model.Predict(pars) + "\n";
+            diffTest += 0.1;
+            Debug.Log(res);
+        }
+        
+
+        if (errorSum > 1)
+        {
+            Debug.Log("Model is not solid, error = "+ errorSum);
+            Accuracy = 0;
+        }
+            
     }
 
     
@@ -206,8 +236,12 @@ public class GameDifficultyModel : MonoBehaviour
         Debug.Log("Saving to disk");
         LogisticRegression.DataLR data = new LogisticRegression.DataLR();
         data.LoadDataFromList(Tries, Results);
-        data.saveDataToCsv(Application.persistentDataPath + "/" + FileName);
-        Debug.Log(data.DepVar.Length + " tries saved to " + Application.persistentDataPath + "/playerData.csv");
+        data.saveDataToCsv(Application.persistentDataPath + "/" + FileDataName);
+        Debug.Log(data.DepVar.Length + " tries saved to " + Application.persistentDataPath + "/" + FileDataName);
+
+        //On sauve aussi l'état du modèle pour nous
+        Model.saveBetasToCsv(Application.persistentDataPath + "/" + FileModelName);
+        Debug.Log("Betas saved to " + Application.persistentDataPath + "/" + FileDataName);
     }
 
     void loadFromDisk()
@@ -223,7 +257,7 @@ public class GameDifficultyModel : MonoBehaviour
         LogisticRegression.DataLR data = new LogisticRegression.DataLR();
         try
         {
-            data.LoadDataFromCsv(Application.persistentDataPath + "/" + FileName);
+            data.LoadDataFromCsv(Application.persistentDataPath + "/" + FileDataName);
         }catch(FormatException e)
         {
             Debug.Log("Player data corrupted !!!! Erasing ("+e.Message+")");
@@ -246,6 +280,13 @@ public class GameDifficultyModel : MonoBehaviour
             addTry(varsWithoutIntercept, data.DepVar[row] > 0,false,false);
             row++;
         }
+    }
+
+    public double [] getBetas()
+    {
+        if(Model.Betas != null)
+            return Model.Betas.Clone() as double[];
+        return null;
     }
 
 

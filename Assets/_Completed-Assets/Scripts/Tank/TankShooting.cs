@@ -67,8 +67,8 @@ namespace Complete
                 m_CurrentLaunchForce = m_MinLaunchForce;
 
                 // Change the clip to the charging clip and start it playing.
-                m_ShootingAudio.clip = m_ChargingClip;
-                m_ShootingAudio.Play ();
+                //m_ShootingAudio.clip = m_ChargingClip;
+                //m_ShootingAudio.Play ();
             }
             // Otherwise, if the fire button is being held and the shell hasn't been launched yet...
             else if ((Input.GetButton (m_FireButton) || Input.GetButton("Fire1")) && !m_Fired)
@@ -91,6 +91,15 @@ namespace Complete
             }
         }
 
+        private float getSpeedToShootPoint(Vector3 point)
+        {
+            float distance = (transform.position - point).magnitude - 2;
+            float theta = Mathf.Asin(transform.GetComponent<Complete.TankShooting>().m_FireTransform.forward.y);
+            float g = Mathf.Abs(Physics.gravity.y);
+            float speed = Mathf.Sqrt((distance / (Mathf.Sin(2 * theta))) * g);
+            return speed;
+        }
+
 
         public void Fire (bool useMouse = false, Vector3 forcedDir = default(Vector3))
         {
@@ -110,24 +119,21 @@ namespace Complete
                 if (Physics.Raycast(ray, out hit))
                 {
                     Vector3 dir = (hit.point - transform.position).normalized;
-                    dir.y = 0.2f;
+                    dir.y = transform.GetComponent<Complete.TankShooting>().m_FireTransform.forward.y;
                     shellInstance = Instantiate(m_Shell, transform.position + dir*2, Quaternion.FromToRotation(Vector3.forward,dir)) as Rigidbody;
-                    shellInstance.velocity = dir * m_CurrentLaunchForce;
+                    shellInstance.velocity = dir * getSpeedToShootPoint(hit.point);
                 }
             }
             else if (forcedDir != default(Vector3))
             {
                 Vector3 forcedDirNorm = forcedDir.normalized;
-                forcedDirNorm.y = 0.2f;
-                shellInstance = Instantiate(m_Shell, transform.position + forcedDir * 2, Quaternion.FromToRotation(Vector3.forward, forcedDir)) as Rigidbody;
-                shellInstance.velocity = forcedDir;
+                forcedDirNorm.y = transform.GetComponent<Complete.TankShooting>().m_FireTransform.forward.y;
+                shellInstance = Instantiate(m_Shell, transform.position + forcedDirNorm * 2, Quaternion.FromToRotation(Vector3.forward, forcedDirNorm)) as Rigidbody;
+                shellInstance.velocity = forcedDirNorm * m_CurrentLaunchForce;
             } else  {
                 shellInstance = Instantiate(m_Shell, m_FireTransform.position, m_FireTransform.rotation) as Rigidbody;
                 shellInstance.velocity = m_CurrentLaunchForce * m_FireTransform.forward;
-            }
-
-            
-            
+            }         
 
             // Change the clip to the firing clip and play it.
             m_ShootingAudio.clip = m_FireClip;

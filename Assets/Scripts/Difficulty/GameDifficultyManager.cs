@@ -59,8 +59,12 @@ public class GameDifficultyManager : MonoBehaviour {
     public AnimationCurve [] DifficultyCurvePlaying; //Courbe en jeu, qu'on répète, après l'apprentissage
     public int NbStepsPlaying; //Nombre d'essais pour le jeu (on répète, sert à scaler la courbe)
     private int DiffCurvePlayingChosen = 0; //La courbe de difficulté qu'on utiliser pour la phase après learning
-    private float Exploration = 0.2f; //Exploration appliquée aux paramètres
-    
+    private float Exploration = 0.05f; //Exploration appliquée à la difficulté quand on utilise la régression
+    private float DeltaWin = 0.1f; 
+    private float DeltaFail = 0.1f;
+    private bool UsingLRModel = false;
+    private double TargetDiff = 0;
+
     GameDifficultyModel Model;
     GDActivity Activity;
     private string PlayerId = "UnknownPlayer";
@@ -77,7 +81,12 @@ public class GameDifficultyManager : MonoBehaviour {
     {
         PlayerId = playerId;
     }
-    
+
+    public string getPlayerId()
+    {
+        return PlayerId;
+    }
+
     /**
         * Permet de sélectionner l'activite à débuter
         * On met à jour le modèle et la courbe de difficulté
@@ -152,11 +161,13 @@ public class GameDifficultyManager : MonoBehaviour {
             else
             {
                 bool win = lastTryAndRes[lastTryAndRes.Length - 1] > 0;
-                double delta = (1.0 / (double)NbStepsLearning);
-                delta = win ? delta : -delta;
+                
+                float delta = win ? DeltaWin : -DeltaFail;
                 for (int i = 0; i < retVals.Length; i++)
-                    retVals[i] = lastTryAndRes[i] + (delta * Random.Range(0.5f, 1.0f));
+                    retVals[i] = lastTryAndRes[i] + (delta * Random.Range(0.5f, 1f));
             }
+            UsingLRModel = false;
+            TargetDiff = 0.5f;
         }
         else
         {
@@ -174,20 +185,27 @@ public class GameDifficultyManager : MonoBehaviour {
                 nbStepOfCurve = NbStepsPlaying;
             }
 
+
+
             //On récup la difficulté voulue
             double difficulty = ac.Evaluate((float)numStepInCurve / (float)nbStepOfCurve);
             difficulty = System.Math.Max(System.Math.Min(difficulty, 1), 0);
 
-            //On affiche la difficulté voulue
-            Debug.Log("Target difficulty is " + difficulty);
-
-            debugString += "\nDiff: " + Mathf.Floor((float)difficulty * 100) / 100;
-
             //On rajoute un petit delta en fonction de l'exploration
             double explo = Random.Range(-Exploration, Exploration);
 
+            debugString += "\nExplo: " + Mathf.Floor((float)explo * 100) / 100;
+
+            //On set la target diff
+            TargetDiff = Mathf.Clamp01((float)(difficulty + explo));
+
+            //On affiche la difficulté voulue
+            Debug.Log("Target difficulty is " + TargetDiff);
+
+            debugString += "\nDiff: " + Mathf.Floor((float)TargetDiff * 100) / 100;
+            
             //On construit le tableau en fonction de l'activité
-            retVals = Activity.getParams(Model, difficulty + explo);
+            retVals = Activity.getParams(Model, TargetDiff);
         }
 
         //On cap les paramètres entre 0 et 1
@@ -196,15 +214,33 @@ public class GameDifficultyManager : MonoBehaviour {
 
         string parsStr = "Player : "+PlayerId+"\n";
         for (int i = 0; i < retVals.Length; i++)
-            parsStr += i + ":[ " + (Mathf.Floor((float)retVals[i] * 100) / 100) + " ]  ";
+            parsStr += i + ":[ " + (Mathf.Floor((float)(retVals[i]) * 100) / 100) + " ]  ";
         Debug.Log("Giving params "+parsStr);
 
         debugString += "\n"+parsStr;
         DebugText.text = debugString;
 
+        UsingLRModel = true;
+
         return retVals;
     }
 
+
+    //Pour faire du log et espionner les variables du modèle
+    public double [] getBetas()
+    {
+        return Model.getBetas();
+    }
+
+    public bool isUsingLRModel()
+    {
+        return UsingLRModel;
+    }
+
+    public double getTargetDiff()
+    {
+        return TargetDiff;
+    }
 
 
 }

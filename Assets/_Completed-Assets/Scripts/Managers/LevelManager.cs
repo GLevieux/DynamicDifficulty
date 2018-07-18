@@ -1,12 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class LevelManager : MonoBehaviour {
 
-    public Transform tankPrefab; 
-    public Transform [] spawnPositions;
-    
+    public Transform tankPrefab;
+    public Transform[] spawnPositions;
+
     Transform player;
     Transform[] ennemies;
 
@@ -19,6 +20,7 @@ public class LevelManager : MonoBehaviour {
         public float speedMove;
         public float speedTurn;
         public float timeBetweenShot;
+        public float precision;
     };
 
     public paramsDiff easyDiff;
@@ -33,7 +35,7 @@ public class LevelManager : MonoBehaviour {
         waitingForNewLevel = true;
         yield return new WaitForSeconds(2);
         createLevel(nextDifficulty);
-        
+
     }
 
     void createLevel(float difficulty)
@@ -46,13 +48,14 @@ public class LevelManager : MonoBehaviour {
                 Destroy(ennemies[i].gameObject);
             }
         }
-        
+
 
         paramsDiff currentDiff;
-        currentDiff.nbEnnemies = (int)Mathf.Lerp((float)easyDiff.nbEnnemies, (float)hardDiff.nbEnnemies, difficulty);
+        currentDiff.nbEnnemies = Mathf.RoundToInt(Mathf.Lerp((float)easyDiff.nbEnnemies, (float)hardDiff.nbEnnemies, difficulty));
         currentDiff.speedTurn = Mathf.Lerp(easyDiff.speedTurn, hardDiff.speedTurn, difficulty);
         currentDiff.speedMove = Mathf.Lerp(easyDiff.speedMove, hardDiff.speedMove, difficulty);
         currentDiff.timeBetweenShot = Mathf.Lerp(easyDiff.timeBetweenShot, hardDiff.timeBetweenShot, difficulty);
+        currentDiff.precision = Mathf.Lerp(easyDiff.precision, hardDiff.precision, difficulty);
 
         spawnEverybody(currentDiff.nbEnnemies);
         for (int i = 0; i < ennemies.Length; i++)
@@ -61,12 +64,13 @@ public class LevelManager : MonoBehaviour {
             ai.timeBetweenShot = currentDiff.timeBetweenShot;
             ai.speedTurn = currentDiff.speedTurn;
             ai.speedMove = currentDiff.speedMove;
+            ai.precision = currentDiff.precision;
         }
 
         waitingForNewLevel = false;
     }
 
-    void setupTank(Transform tank,float patateColor, int num)
+    void setupTank(Transform tank, float patateColor, int num)
     {
         MeshRenderer[] renderers = tank.GetComponentsInChildren<MeshRenderer>();
 
@@ -76,7 +80,7 @@ public class LevelManager : MonoBehaviour {
         {
             // ... set their material color to the color specific to this tank.
             renderers[i].material.color = color;
-        } 
+        }
 
         Complete.TankMovement mvt = tank.GetComponent<Complete.TankMovement>();
         Complete.TankShooting sht = tank.GetComponent<Complete.TankShooting>();
@@ -95,10 +99,14 @@ public class LevelManager : MonoBehaviour {
     }
 
 
-	// Use this for initialization
-	void Start () {
-        GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
+    // Use this for initialization
+    void Start() {
         GDiffManager.setPlayerId("MonSuperJoueur");
+        GameObject pm = GameObject.Find("PlayerManager");
+        if (pm)
+            GDiffManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
+        GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
+
         createLevel(0.2f);
     }
 
@@ -106,21 +114,21 @@ public class LevelManager : MonoBehaviour {
     {
         ennemies = new Transform[nb];
         int spawn = 1;
-        for(int i = 0; i < nb; i++)
+        for (int i = 0; i < nb; i++)
         {
             ennemies[i] = Instantiate(tankPrefab, spawnPositions[spawn].position, spawnPositions[spawn].rotation) as Transform;
             TankAI ai = ennemies[i].gameObject.AddComponent<TankAI>();
-            ai.setPlayer(player,ennemies);
-        
-            setupTank(ennemies[i], 0.9f,i+3);
+            ai.setPlayer(player, ennemies);
+
+            setupTank(ennemies[i], 0.9f, i + 3);
             spawn++;
             if (spawn >= spawnPositions.Length)
                 spawn = 1;
         }
     }
-	
-	// Update is called once per frame
-	void Update () {
+
+    // Update is called once per frame
+    void Update() {
         if (waitingForNewLevel)
             return;
 
@@ -140,8 +148,24 @@ public class LevelManager : MonoBehaviour {
                 end = true;
         }
 
+        /**
+         * Fin de niveau !!! on log tout ici
+         * */
         if (end)
         {
+            double[] betas = GDiffManager.getBetas();
+            if (betas == null)
+                betas = new double[2];
+
+            this.log(GDiffManager.getPlayerId(),
+                betas[0],
+                betas[1],
+                GDiffManager.getModelQuality(),
+                GDiffManager.isUsingLRModel(),
+                (float)GDiffManager.getTargetDiff(),
+                nextDifficulty,
+                alldead);
+
             double[] vars = new double[1];
             vars[0] = nextDifficulty;
             GDiffManager.addTry(vars, alldead);
@@ -152,7 +176,54 @@ public class LevelManager : MonoBehaviour {
             StartCoroutine("nextLevel");
 
         }
-        
-            
+
+
+    }
+
+    public void log(string player, double beta0, double beta1, double accuracy, bool usedModel, float targetDiff, float param, bool win)
+    {
+        string csvFile = Application.persistentDataPath + "/" + player + "_log.csv";
+
+        try
+        {
+            FileStream ofs;
+            StreamWriter sw;
+
+            if (!File.Exists(csvFile))
+            {
+                ofs = new FileStream(csvFile, FileMode.Create);
+                sw = new StreamWriter(ofs);
+
+                sw.Write("Time;beta0;beta1;accuracy;used Model;target Diff;param Diff;win\n");
+
+                sw.Flush();
+                ofs.Flush();
+                sw.Close();
+                ofs.Close();
+            }
+
+            ofs = new FileStream(csvFile, FileMode.Append);
+            sw = new StreamWriter(ofs);
+
+            string dateTime = System.DateTime.Now.ToString("yyyy/MM/dd hh:mm:ss");
+            sw.Write(dateTime+";");
+            sw.Write(beta0 + ";");
+            sw.Write(beta1 + ";");
+            sw.Write(accuracy + ";");
+            sw.Write((usedModel?1:0) + ";");
+            sw.Write(targetDiff + ";");
+            sw.Write(param + ";");
+            sw.Write((win ? 1 : 0) + "\n");
+          
+            sw.Flush();
+            ofs.Flush();
+            sw.Close();
+            ofs.Close();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError(e.Message);
+        }
+
     }
 }
