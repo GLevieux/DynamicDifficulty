@@ -15,6 +15,7 @@ namespace Complete
         public float m_MinLaunchForce = 15f;        // The force given to the shell if the fire button is not held.
         public float m_MaxLaunchForce = 30f;        // The force given to the shell if the fire button is held for the max charge time.
         public float m_MaxChargeTime = 0.75f;       // How long the shell can charge for before it is fired at max force.
+        public float deltaTimeFire = 0.5f;
 
 
         private string m_FireButton;                // The input axis that is used for launching shells.
@@ -45,6 +46,9 @@ namespace Complete
         {
             if (m_PlayerNumber > 2)
                 return;
+
+            deltaTimeFire -= Time.deltaTime;
+
             // The slider should have a default value of the minimum launch force.
             m_AimSlider.value = m_MinLaunchForce;
 
@@ -56,7 +60,7 @@ namespace Complete
                 Fire ();
             }
             // Otherwise, if the fire button has just started being pressed...
-            else if (Input.GetButtonDown (m_FireButton))
+            else if ((Input.GetButtonDown (m_FireButton) || Input.GetButtonDown("Fire1")) && deltaTimeFire < 0)
             {
                 // ... reset the fired flag and reset the launch force.
                 m_Fired = false;
@@ -67,12 +71,12 @@ namespace Complete
                 m_ShootingAudio.Play ();
             }
             // Otherwise, if the fire button is being held and the shell hasn't been launched yet...
-            else if (Input.GetButton (m_FireButton) && !m_Fired)
+            else if ((Input.GetButton (m_FireButton) || Input.GetButton("Fire1")) && !m_Fired)
             {
                 // Increment the launch force and update the slider.
                 m_CurrentLaunchForce += m_ChargeSpeed * Time.deltaTime;
 
-                m_AimSlider.value = m_CurrentLaunchForce;
+                //m_AimSlider.value = m_CurrentLaunchForce;
             }
             // Otherwise, if the fire button is released and the shell hasn't been launched yet...
             else if (Input.GetButtonUp (m_FireButton) && !m_Fired)
@@ -80,20 +84,50 @@ namespace Complete
                 // ... launch the shell.
                 Fire ();
             }
+            else if (Input.GetButtonUp("Fire1") && !m_Fired)
+            {
+                // ... launch the shell.
+                Fire(true);
+            }
         }
 
 
-        public void Fire ()
+        public void Fire (bool useMouse = false, Vector3 forcedDir = default(Vector3))
         {
             // Set the fired flag so only Fire is only called once.
             m_Fired = true;
+            deltaTimeFire = 0.5f;
 
             // Create an instance of the shell and store a reference to it's rigidbody.
-            Rigidbody shellInstance =
-                Instantiate (m_Shell, m_FireTransform.position, m_FireTransform.rotation) as Rigidbody;
+            Rigidbody shellInstance = null;
 
             // Set the shell's velocity to the launch force in the fire position's forward direction.
-            shellInstance.velocity = m_CurrentLaunchForce * m_FireTransform.forward; 
+            if (useMouse)
+            {
+                RaycastHit hit;
+                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+                if (Physics.Raycast(ray, out hit))
+                {
+                    Vector3 dir = (hit.point - transform.position).normalized;
+                    dir.y = 0.2f;
+                    shellInstance = Instantiate(m_Shell, transform.position + dir*2, Quaternion.FromToRotation(Vector3.forward,dir)) as Rigidbody;
+                    shellInstance.velocity = dir * m_CurrentLaunchForce;
+                }
+            }
+            else if (forcedDir != default(Vector3))
+            {
+                Vector3 forcedDirNorm = forcedDir.normalized;
+                forcedDirNorm.y = 0.2f;
+                shellInstance = Instantiate(m_Shell, transform.position + forcedDir * 2, Quaternion.FromToRotation(Vector3.forward, forcedDir)) as Rigidbody;
+                shellInstance.velocity = forcedDir;
+            } else  {
+                shellInstance = Instantiate(m_Shell, m_FireTransform.position, m_FireTransform.rotation) as Rigidbody;
+                shellInstance.velocity = m_CurrentLaunchForce * m_FireTransform.forward;
+            }
+
+            
+            
 
             // Change the clip to the firing clip and play it.
             m_ShootingAudio.clip = m_FireClip;

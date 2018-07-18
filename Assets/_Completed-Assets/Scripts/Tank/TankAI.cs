@@ -12,6 +12,8 @@ public class TankAI : MonoBehaviour {
     public float speedTurn = 1.0f;
     public float speedMove = 0.5f;
     private float cooldownShot = 0;
+    private float coolDownVariabilityDir = 0;
+    private Vector3 dirVariability;
 
 	// Use this for initialization
 	void Start () {
@@ -27,8 +29,33 @@ public class TankAI : MonoBehaviour {
 	
 	// Update is called once per frame
 	void LateUpdate () {
+
+        coolDownVariabilityDir -= Time.deltaTime;
+        if(coolDownVariabilityDir <= 0)
+        {
+            coolDownVariabilityDir = 1.0f;
+            dirVariability = Random.onUnitSphere;
+        }
         float distance = (player.position - transform.position).magnitude;
-        float angle = Vector3.SignedAngle(transform.forward, player.position - transform.position, Vector3.up);
+
+        //On détermine ou il veut aller
+        //Il veut aller vers le joueur, mais aussi s'éloigner de ses potes
+        //On fait un vecteur de répulsion
+        Vector3 repulsion = new Vector3();
+        for (int i = 0; i < ennemies.Length; i++)
+        {
+            if (ennemies[i] != transform)
+            {
+                Vector3 dirToOtherAi = (transform.position - ennemies[i].position);
+                float dist = dirToOtherAi.magnitude;
+                repulsion += (dirToOtherAi.normalized * 40) / dist;
+            }
+                
+        }
+
+        Vector3 dirPoint = player.position + repulsion + dirVariability * 2.0f;
+
+        float angle = Vector3.SignedAngle(transform.forward, dirPoint - transform.position, Vector3.up);
         tm.m_TurnInputValue = angle/50 * speedTurn;
         tm.m_MovementInputValue = speedMove;
 
@@ -41,7 +68,7 @@ public class TankAI : MonoBehaviour {
             float dist = (player.position - ennemies[i].position).magnitude;
             if(ennemies[i]!= transform)
             {
-                if(dist < 15)
+                if(dist < 10)
                 {
                     tooClose = true;
                 }
@@ -49,7 +76,7 @@ public class TankAI : MonoBehaviour {
 
         }
 
-        if (Mathf.Abs(angle) < 10 && cooldownShot <= 0 && !tooClose)
+        if (Mathf.Abs(angle) < 5 && cooldownShot <= 0 && !tooClose)
         {
             ts.m_CurrentLaunchForce = Mathf.Max(15.0f,distance);
             ts.Fire();

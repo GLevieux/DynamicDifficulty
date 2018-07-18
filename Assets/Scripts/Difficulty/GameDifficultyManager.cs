@@ -176,6 +176,7 @@ public class GameDifficultyManager : MonoBehaviour {
 
             //On récup la difficulté voulue
             double difficulty = ac.Evaluate((float)numStepInCurve / (float)nbStepOfCurve);
+            difficulty = System.Math.Max(System.Math.Min(difficulty, 1), 0);
 
             //On affiche la difficulté voulue
             Debug.Log("Target difficulty is " + difficulty);
@@ -188,6 +189,10 @@ public class GameDifficultyManager : MonoBehaviour {
             //On construit le tableau en fonction de l'activité
             retVals = Activity.getParams(Model, difficulty + explo);
         }
+
+        //On cap les paramètres entre 0 et 1
+        for (int i = 0; i < retVals.Length; i++)
+            retVals[i] = System.Math.Max(System.Math.Min(retVals[i],1),0);
 
         string parsStr = "Player : "+PlayerId+"\n";
         for (int i = 0; i < retVals.Length; i++)
