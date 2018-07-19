@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class LevelManager : MonoBehaviour {
 
@@ -26,9 +27,15 @@ public class LevelManager : MonoBehaviour {
     public paramsDiff easyDiff;
     public paramsDiff hardDiff;
 
+    public Text TScore;
+    public Text TWin;
+    public Text TFail;
+
     private float nextDifficulty = 0;
     private bool waitingForNewLevel = true;
     private int numLevel = 0;
+
+    private int Score = 0;
 
     IEnumerator nextLevel()
     {
@@ -41,7 +48,7 @@ public class LevelManager : MonoBehaviour {
     void createLevel(float difficulty)
     {
         if (player)
-        {
+        { 
             Destroy(player.gameObject);
             for (int i = 0; i < ennemies.Length; i++)
             {
@@ -68,6 +75,10 @@ public class LevelManager : MonoBehaviour {
         }
 
         waitingForNewLevel = false;
+
+        updateScoreLabel();
+        TWin.enabled = false;
+        TFail.enabled = false;
     }
 
     void setupTank(Transform tank, float patateColor, int num)
@@ -108,6 +119,8 @@ public class LevelManager : MonoBehaviour {
         GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
 
         createLevel(0.2f);
+
+        Score = 0;
     }
 
     void newEnnemies(int nb, Transform player)
@@ -127,6 +140,11 @@ public class LevelManager : MonoBehaviour {
         }
     }
 
+    void updateScoreLabel()
+    {
+        TScore.text = "Level:" + numLevel + "\n" + "Score:" + (Score); 
+    }
+
     // Update is called once per frame
     void Update() {
         if (waitingForNewLevel)
@@ -143,6 +161,8 @@ public class LevelManager : MonoBehaviour {
             {
                 if (ennemies[i].gameObject.activeSelf)
                     alldead = false;
+                
+
             }
             if (alldead)
                 end = true;
@@ -153,6 +173,19 @@ public class LevelManager : MonoBehaviour {
          * */
         if (end)
         {
+            bool win = false;
+            if(alldead && player.gameObject.activeSelf)
+            {
+                win = true;
+                Score++;
+            }
+            if (win)
+                TWin.enabled = true;
+            else
+                TFail.enabled = true;
+
+
+
             double[] betas = GDiffManager.getBetas();
             if (betas == null)
                 betas = new double[2];
@@ -164,11 +197,11 @@ public class LevelManager : MonoBehaviour {
                 GDiffManager.isUsingLRModel(),
                 (float)GDiffManager.getTargetDiff(),
                 nextDifficulty,
-                alldead);
+                win);
 
             double[] vars = new double[1];
             vars[0] = nextDifficulty;
-            GDiffManager.addTry(vars, alldead);
+            GDiffManager.addTry(vars, win);
 
             numLevel++;
             vars = GDiffManager.getDiffParams(numLevel);

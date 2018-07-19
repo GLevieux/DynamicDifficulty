@@ -52,13 +52,44 @@ public class GameDifficultyManager : MonoBehaviour {
         Model = GetComponent<GameDifficultyModel>();
     }
 
+    [System.Serializable]
+    public class DiffCurve
+    {
+        [Range(0, 1)]
+        public float[] DiffStepsLearning;
+        [Range(0, 1)]
+        public float[] DiffStepsPlaying;
+
+        public float getDifficulty(int step)
+        {
+            if (DiffStepsLearning == null || DiffStepsPlaying == null)
+                return 0;
+
+            if (DiffStepsLearning != null && step < DiffStepsLearning.Length)
+                return DiffStepsLearning[step];
+
+            if (DiffStepsLearning != null)
+                step -= DiffStepsLearning.Length;
+
+            while (step >= DiffStepsPlaying.Length)
+                step -= DiffStepsPlaying.Length;
+
+            if (DiffStepsPlaying != null && step < DiffStepsPlaying.Length)
+                return DiffStepsPlaying[step];
+                  
+            return 0;
+        }
+    }
+
+    public DiffCurve[] DifficultyCurves;
+
     public Text DebugText;
 
-    public AnimationCurve DifficultyCurveLearning; //Courbe au début progressive
-    public int NbStepsLearning; //Nombre d'essais pour l'apprentissage
-    public AnimationCurve [] DifficultyCurvePlaying; //Courbe en jeu, qu'on répète, après l'apprentissage
-    public int NbStepsPlaying; //Nombre d'essais pour le jeu (on répète, sert à scaler la courbe)
-    private int DiffCurvePlayingChosen = 0; //La courbe de difficulté qu'on utiliser pour la phase après learning
+    //public AnimationCurve DifficultyCurveLearning; //Courbe au début progressive
+    //public int NbStepsLearning; //Nombre d'essais pour l'apprentissage
+    //public AnimationCurve [] DifficultyCurvePlaying; //Courbe en jeu, qu'on répète, après l'apprentissage
+    //public int NbStepsPlaying; //Nombre d'essais pour le jeu (on répète, sert à scaler la courbe)
+    private int DiffCurveChosen = 0; //La courbe de difficulté qu'on utiliser pour la phase après learning
     private float Exploration = 0.05f; //Exploration appliquée à la difficulté quand on utilise la régression
     private float DeltaWin = 0.1f; 
     private float DeltaFail = 0.1f;
@@ -71,7 +102,7 @@ public class GameDifficultyManager : MonoBehaviour {
 
     private void setDiffCurve(int diffCurve)
     {
-        DiffCurvePlayingChosen = diffCurve;
+        DiffCurveChosen = diffCurve;
     }
 
     /**
@@ -107,7 +138,7 @@ public class GameDifficultyManager : MonoBehaviour {
         Model.setProfile(PlayerId, Activity.Name);
 
         //On tire une courbe de difficulté au hasard
-        setDiffCurve(Random.Range(0, DifficultyCurvePlaying.Length));
+        setDiffCurve(Random.Range(0, DifficultyCurves.Length));
     }
 
     /**
@@ -174,7 +205,16 @@ public class GameDifficultyManager : MonoBehaviour {
             Debug.Log("Model is okay (" + quality + "), using it :)");
 
             //on regarde dans quelle courbe on tombe
-            AnimationCurve ac = DifficultyCurveLearning;
+            double difficulty = 0;
+            if(DifficultyCurves != null)
+            {
+                difficulty = DifficultyCurves[DiffCurveChosen].getDifficulty(numLevel);
+            }
+            
+            /**
+             * Code précédent, avec les animation curves
+             * /
+            /*AnimationCurve ac = DifficultyCurveLearning;
             int numStepInCurve = numLevel;
             int nbStepOfCurve = NbStepsLearning;
             if (numLevel >= NbStepsLearning)
@@ -184,12 +224,9 @@ public class GameDifficultyManager : MonoBehaviour {
                 numStepInCurve = numStepInCurve % NbStepsPlaying;
                 nbStepOfCurve = NbStepsPlaying;
             }
-
-
-
             //On récup la difficulté voulue
             double difficulty = ac.Evaluate((float)numStepInCurve / (float)nbStepOfCurve);
-            difficulty = System.Math.Max(System.Math.Min(difficulty, 1), 0);
+            difficulty = System.Math.Max(System.Math.Min(difficulty, 1), 0);*/
 
             //On rajoute un petit delta en fonction de l'exploration
             double explo = Random.Range(-Exploration, Exploration);
@@ -206,6 +243,8 @@ public class GameDifficultyManager : MonoBehaviour {
             
             //On construit le tableau en fonction de l'activité
             retVals = Activity.getParams(Model, TargetDiff);
+
+            UsingLRModel = true;
         }
 
         //On cap les paramètres entre 0 et 1
@@ -219,9 +258,7 @@ public class GameDifficultyManager : MonoBehaviour {
 
         debugString += "\n"+parsStr;
         DebugText.text = debugString;
-
-        UsingLRModel = true;
-
+        
         return retVals;
     }
 

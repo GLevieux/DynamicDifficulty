@@ -58,7 +58,29 @@ public class GameDifficultyModel : MonoBehaviour
         if (Results == null)
             return 0;
         if (Results.Count < 10)
+        {
+            Debug.Log("Moins de 10 résultats, model inutilisable");
             return 0;
+        }
+            
+        //on compte les 1 et les 0
+        double nb0 = 0;
+        double nb1 = 0;
+        for (int i=0;i< Results.Count; i++)
+        {
+            if (Results[i] == 0)
+                nb0++;
+            else
+                nb1++;
+        }
+
+        //Si on a pas assez de 1 ou pas assez de 0
+        if (nb1 <= 3 || nb0 <= 3)
+        {
+            Debug.Log("Moins de 3 wins ou 3 fails, model inutilisable");
+            return 0;
+        }
+
         return getAccuracy();
     }
 
@@ -172,7 +194,7 @@ public class GameDifficultyModel : MonoBehaviour
 
         //On ne garde que les n derniers car apprentissage
         data = data.getLastNRows(NbLastSamples);
-        data = data.shuffle();
+       
 
         data.saveDataToCsv(Application.persistentDataPath + "/usedToTrain.csv");
 
@@ -182,15 +204,25 @@ public class GameDifficultyModel : MonoBehaviour
         {
             //Ten fold cross val
             Accuracy = 0;
+            
             for (int i = 0; i < 10; i++)
             {
-                LogisticRegression.DataLR dataTrain;
-                LogisticRegression.DataLR dataTest;
-                data.split(i * 10, (i + 1) * 10, out dataTrain, out dataTest);
-                Model = LogisticRegression.ComputeModel(dataTrain);
-                Accuracy += LogisticRegression.TestModel(Model, dataTest);
+                double AccuracyNow = 0;
+                data = data.shuffle();
+                int nk = 10;
+                for (int k = 0; k < nk; k++)
+                {
+                    LogisticRegression.DataLR dataTrain;
+                    LogisticRegression.DataLR dataTest;
+                    data.split(k * (100/nk), (k + 1) * (100 / nk), out dataTrain, out dataTest);
+                    Model = LogisticRegression.ComputeModel(dataTrain);
+                    AccuracyNow += LogisticRegression.TestModel(Model, dataTest);
+                }
+                AccuracyNow /= nk;
+                Accuracy += AccuracyNow;
             }
             Accuracy /= 10;
+
             AccuracyUpToDate = true;
             Debug.Log("Updating accuracy : " + Accuracy);
         }
@@ -204,25 +236,45 @@ public class GameDifficultyModel : MonoBehaviour
         //On vérifie si on a pas des soucis de modèle complètement dans les choux
         //Prédiction de difficulté doit marcher dans les deux sens
         double errorSum = 0;
-        double diffTest = 0;
+        double diffTest = 0.1;
         double [] pars = new double[1];
+        double[] parsForAllDiff = new double[10];
         string res = "";
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 8; i++)
         {
             pars[0] = Model.InvPredict(diffTest,pars,0); //on regarde que la première variable.
+            parsForAllDiff[i] = pars[0];
             res = "Diff = " + diffTest + " par = " + pars[0];
             errorSum += System.Math.Abs(diffTest - Model.Predict(pars)); //On passe dans les deux sens on doit avoir pareil
             res += " res = " + Model.Predict(pars) + "\n";
             diffTest += 0.1;
             Debug.Log(res);
         }
-        
 
         if (errorSum > 1)
         {
-            Debug.Log("Model is not solid, error = "+ errorSum);
+            Debug.Log("Model is not solid, error = " + errorSum);
             Accuracy = 0;
         }
+
+        //On calcule l'écart type des paramètres calculés pour toute la gamme de difficulté 0 - 1
+        //En gros si on a toujours le meme paramètre, on a un souci
+        double mean = 0;
+        for (int i = 0; i < 8; i++)
+            mean += parsForAllDiff[i];
+        mean /= 8;
+        double sd = 0;
+        for (int i = 0; i < 8; i++)
+            sd += (parsForAllDiff[i] - mean)* (parsForAllDiff[i] - mean);
+        sd = System.Math.Sqrt(sd);
+
+        Debug.Log("Model parameter estimation sd = " + sd);
+
+        if (sd < 0.05 || double.IsNaN(sd))
+        {
+            Debug.Log("Model parameter estimation is always the same : sd=" + sd);
+            Accuracy = 0;
+        }      
             
     }
 

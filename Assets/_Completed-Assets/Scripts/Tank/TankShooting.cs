@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace Complete
@@ -22,6 +23,38 @@ namespace Complete
         public float m_CurrentLaunchForce;         // The force that will be given to the shell when the fire button is released.
         private float m_ChargeSpeed;                // How fast the launch force increases, based on the max charge time.
         private bool m_Fired;                       // Whether or not the shell has been launched with this button press.
+
+        public List<Transform> Bullets = new List<Transform>();
+
+        public void OnDestroy()
+        {
+            foreach (Transform t in Bullets)
+            {
+                if (t != null)
+                {
+                    Debug.Log("Disab : Destroy bullet " + t.gameObject);
+                    if (t.gameObject != null)
+                        Destroy(t.gameObject);
+                }
+            }
+                
+        }
+
+
+        public void OnDisable()
+        {
+            foreach (Transform t in Bullets)
+            {
+                if(t != null)
+                {
+                    Debug.Log("Disab : Destroy bullet " + t.gameObject);
+                    if (t.gameObject != null)
+                        Destroy(t.gameObject);
+                }
+                
+            }
+        }
+
 
 
         private void OnEnable()
@@ -133,7 +166,10 @@ namespace Complete
             } else  {
                 shellInstance = Instantiate(m_Shell, m_FireTransform.position, m_FireTransform.rotation) as Rigidbody;
                 shellInstance.velocity = m_CurrentLaunchForce * m_FireTransform.forward;
-            }         
+            }
+
+            if(shellInstance != null)
+                Bullets.Add(shellInstance.transform);
 
             // Change the clip to the firing clip and play it.
             m_ShootingAudio.clip = m_FireClip;
