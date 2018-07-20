@@ -244,7 +244,7 @@ public class GameDifficultyModel : MonoBehaviour
         {
             pars[0] = Model.InvPredict(diffTest,pars,0); //on regarde que la première variable.
             parsForAllDiff[i] = pars[0];
-            res = "Diff = " + diffTest + " par = " + pars[0];
+            res = "D = " + diffTest + " par = " + pars[0];
             errorSum += System.Math.Abs(diffTest - Model.Predict(pars)); //On passe dans les deux sens on doit avoir pareil
             res += " res = " + Model.Predict(pars) + "\n";
             diffTest += 0.1;

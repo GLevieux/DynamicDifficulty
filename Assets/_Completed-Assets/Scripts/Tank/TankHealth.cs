@@ -20,7 +20,8 @@ namespace Complete
 
         public void OnDestroy()
         {
-            Destroy(m_ExplosionParticles.gameObject);
+            if(m_ExplosionParticles != null)
+                Destroy(m_ExplosionParticles.gameObject);
         }
 
         private void Awake ()
