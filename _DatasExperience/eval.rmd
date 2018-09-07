@@ -55,6 +55,7 @@ DTGame <- load_data(DTGame,"olivier")
 DTGame <- load_data(DTGame,"Lauren")
 DTGame <- load_data(DTGame,"Clement")
 DTGame <- load_data(DTGame,"Antoine")
+DTGame <- load_data(DTGame,"spotblue")
 
 
 plot(DTGame$param.Diff)
