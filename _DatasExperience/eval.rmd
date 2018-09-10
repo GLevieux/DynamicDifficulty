@@ -10,6 +10,8 @@ require(data.table)
 require(ggplot2)
 require(hexbin)
 library(knitr)
+
+V2 <- FALSE
 ```
 
 ```{r echo=FALSE}
@@ -43,23 +45,35 @@ load_data <- function(DTGame, name){
 
 DTGame <- data.table()
 
-DTGame <- load_data(DTGame,"123456")
-DTGame <- load_data(DTGame,"kak@shi")
-DTGame <- load_data(DTGame,"Cronuk")
-DTGame <- load_data(DTGame,"thomas")
-DTGame <- load_data(DTGame,"william")
-DTGame <- load_data(DTGame,"guillaume")
-DTGame <- load_data(DTGame,"TB")
-DTGame <- load_data(DTGame,"helene")
-DTGame <- load_data(DTGame,"olivier")
-DTGame <- load_data(DTGame,"Lauren")
-DTGame <- load_data(DTGame,"Clement")
-DTGame <- load_data(DTGame,"Antoine")
-DTGame <- load_data(DTGame,"spotblue")
+if(V2 == TRUE)
+{
+  DTGame <- load_data(DTGame,"V2/guillaumeV2")
+}else{
+  DTGame <- load_data(DTGame,"123456")
+  DTGame <- load_data(DTGame,"kak@shi")
+  DTGame <- load_data(DTGame,"Cronuk")
+  DTGame <- load_data(DTGame,"thomas")
+  DTGame <- load_data(DTGame,"william")
+  DTGame <- load_data(DTGame,"guillaume")
+  DTGame <- load_data(DTGame,"TB")
+  DTGame <- load_data(DTGame,"helene")
+  DTGame <- load_data(DTGame,"olivier")
+  DTGame <- load_data(DTGame,"Lauren")
+  DTGame <- load_data(DTGame,"Clement")
+  DTGame <- load_data(DTGame,"Antoine")
+  DTGame <- load_data(DTGame,"spotblue")
+  DTGame <- load_data(DTGame,"Indromak")
+  DTGame <- load_data(DTGame,"Roro")
+}
+
+
 
 
 plot(DTGame$param.Diff)
+plot(DTGame$target.Diff)
 plot(x=DTGame$step,y=DTGame$variation.Model)
+
+
 
 #plot(DTGame$variation.Model,type="l")
 
@@ -86,10 +100,12 @@ meanStepsConverge = mean(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 sdStepsConverge = sd(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 nbPlayers = nrow(DTGame[used.Model == 0,.N, by = idPlayer])
 
-DTVarModel = DTGame[used.Model==1,.(mean(variation.Model),mean(param.Diff)), by = idPlayer]
+DTVarModel = DTGame[used.Model==1,.(variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
 #barplot(DTVarModel$V1,names.arg=DTVarModel$idPlayer)
-hist(DTVarModel$V1,main = "Histogram of model variability")
-hist(DTVarModel$V2,main = "Histogram of player levels")
+hist(DTVarModel$variation,main = "Histogram of model variability")
+hist(DTVarModel$niveau,main = "Histogram of player levels")
+
+boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
 
 ```
 
@@ -102,7 +118,7 @@ Target Diff|Actual Target Diff   | Param           |  p(fail)       |  delta    
 0.5        |   `r meanTarget05`  | `r meanParam05` | `r meanFail05` |  `r meanTarget05-meanFail05`   | `r nTarget05`
 0.7        |   `r meanTarget07`  | `r meanParam07` | `r meanFail07` |  `r meanTarget07-meanFail07`   | `r nTarget07`
 
-For each player, we computed the mean variation of model predictions when the model was used : `r kable(DTVarModel[order(V1)])`
+For each player, we computed the mean variation of model predictions when the model was used : `r kable(DTVarModel[order(niveau)])`
 
 
 ```{r echo=FALSE}
