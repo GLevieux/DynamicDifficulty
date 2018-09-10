@@ -12,7 +12,7 @@ public class NextScene : MonoBehaviour {
     {
         if (playerNameText.text != "")
         {
-            playerManager.PlayerName = playerNameText.text;
+            playerManager.PlayerName = playerNameText.text+"V2";
             SceneManager.LoadScene(1);
         }
             

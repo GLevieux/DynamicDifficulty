@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class LevelManager : MonoBehaviour {
@@ -47,6 +48,7 @@ public class LevelManager : MonoBehaviour {
 
     void createLevel(float difficulty)
     {
+
         if (player)
         { 
             Destroy(player.gameObject);
@@ -204,6 +206,10 @@ public class LevelManager : MonoBehaviour {
             GDiffManager.addTry(vars, win);
 
             numLevel++;
+
+            if (numLevel >= 62)
+                SceneManager.LoadScene(2);
+            
             vars = GDiffManager.getDiffParams(numLevel);
             nextDifficulty = (float)vars[0];
             StartCoroutine("nextLevel");

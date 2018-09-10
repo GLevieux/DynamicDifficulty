@@ -1015,7 +1015,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4310344822235638, guid: 2b426047c40ac414b82550dda816cef6, type: 2}
       propertyPath: m_LocalScale.x
-      value: 0.5
+      value: 0.25
       objectReference: {fileID: 0}
     - target: {fileID: 4310344822235638, guid: 2b426047c40ac414b82550dda816cef6, type: 2}
       propertyPath: m_LocalScale.y
@@ -1023,7 +1023,11 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4310344822235638, guid: 2b426047c40ac414b82550dda816cef6, type: 2}
       propertyPath: m_LocalScale.z
-      value: 0.5
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 1996549084202640, guid: 2b426047c40ac414b82550dda816cef6, type: 2}
+      propertyPath: m_Name
+      value: CrossHair
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 2b426047c40ac414b82550dda816cef6, type: 2}
