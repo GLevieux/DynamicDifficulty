@@ -47,9 +47,10 @@ DTGame <- data.table()
 
 if(V2 == TRUE)
 {
-  DTGame <- load_data(DTGame,"V2/guillaumeV2")
-  DTGame <- load_data(DTGame,"V2/WilliamV2")
-  DTGame <- load_data(DTGame,"V2/thomasV2")
+  #DTGame <- load_data(DTGame,"V2/guillaumeV2")
+  #DTGame <- load_data(DTGame,"V2/WilliamV2")
+  #DTGame <- load_data(DTGame,"V2/thomasV2")
+  DTGame <- load_data(DTGame,"V2/kak@shiV2")
 }else{
   DTGame <- load_data(DTGame,"123456")
   DTGame <- load_data(DTGame,"kak@shi")
