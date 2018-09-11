@@ -11,7 +11,7 @@ require(ggplot2)
 require(hexbin)
 library(knitr)
 
-V2 <- TRUE
+V2 <- FALSE
 ```
 
 ```{r echo=FALSE}
@@ -47,10 +47,11 @@ DTGame <- data.table()
 
 if(V2 == TRUE)
 {
-  #DTGame <- load_data(DTGame,"V2/guillaumeV2")
-  #DTGame <- load_data(DTGame,"V2/WilliamV2")
-  #DTGame <- load_data(DTGame,"V2/thomasV2")
+  DTGame <- load_data(DTGame,"V2/guillaumeV2")
+  DTGame <- load_data(DTGame,"V2/WilliamV2")
+  DTGame <- load_data(DTGame,"V2/thomasV2")
   DTGame <- load_data(DTGame,"V2/kak@shiV2")
+  DTGame <- load_data(DTGame,"V2/CronukV2")
 }else{
   DTGame <- load_data(DTGame,"123456")
   DTGame <- load_data(DTGame,"kak@shi")
@@ -67,6 +68,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"spotblue")
   DTGame <- load_data(DTGame,"Indromak")
   DTGame <- load_data(DTGame,"Roro")
+  DTGame <- load_data(DTGame,"ak")
 }
 
 
