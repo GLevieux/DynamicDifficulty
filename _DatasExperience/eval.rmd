@@ -75,6 +75,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"stephanie")
   DTGame <- load_data(DTGame,"nicole")
   DTGame <- load_data(DTGame,"pierrec")
+  DTGame <- load_data(DTGame,"pierrep")
 }
 
 
