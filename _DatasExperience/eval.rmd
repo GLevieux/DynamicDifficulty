@@ -11,7 +11,7 @@ require(ggplot2)
 require(hexbin)
 library(knitr)
 
-V2 <- TRUE
+V2 <- FALSE
 removeOutliers  <- TRUE
 ```
 
