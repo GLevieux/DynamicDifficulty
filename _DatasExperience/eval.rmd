@@ -126,7 +126,7 @@ if(removeOutliers == TRUE)
   
   nbTotalOutliers = nrow(outliers)
   
-  DTGame[idPlayer %in% unlist(outliers$id)]
+  DTGame = DTGame[!(idPlayer %in% unlist(outliers$id))]
 }
 
 
