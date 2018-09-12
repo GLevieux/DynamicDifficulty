@@ -55,9 +55,9 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/AntoineV2")
   DTGame <- load_data(DTGame,"V2/Tifanie BV2")
 }else{
-  #DTGame <- load_data(DTGame,"123456")
-  #DTGame <- load_data(DTGame,"kak@shi")
-  #DTGame <- load_data(DTGame,"Clement")
+  DTGame <- load_data(DTGame,"123456")
+  DTGame <- load_data(DTGame,"kak@shi")
+  DTGame <- load_data(DTGame,"Clement")
   DTGame <- load_data(DTGame,"Cronuk")
   DTGame <- load_data(DTGame,"thomas")
   DTGame <- load_data(DTGame,"william")
@@ -80,23 +80,17 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"subhi") #Homme 
   DTGame <- load_data(DTGame,"faten") #Femme 
   DTGame <- load_data(DTGame,"sandra") #Femme 
+  DTGame <- load_data(DTGame,"simon chauvin") #Homme 
+  DTGame <- load_data(DTGame,"stephaner") #Homme 35
   
 }
-
-
 
 
 plot(DTGame$param.Diff)
 plot(DTGame$target.Diff)
 plot(x=DTGame$step,y=DTGame$variation.Model)
 
-
-
 #plot(DTGame$variation.Model,type="l")
-
-
-
-
 
 meanFail02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$fail)
 meanTarget02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
