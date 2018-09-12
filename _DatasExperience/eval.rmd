@@ -83,6 +83,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"simon chauvin") #Homme 
   DTGame <- load_data(DTGame,"stephaner") #Homme 35
   DTGame <- load_data(DTGame,"stan") #Homme 24
+  DTGame <- load_data(DTGame,"ALIZEE") #Femme 20
   
 }
 
