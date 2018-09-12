@@ -53,6 +53,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/kak@shiV2")
   DTGame <- load_data(DTGame,"V2/CronukV2")
   DTGame <- load_data(DTGame,"V2/AntoineV2")
+  DTGame <- load_data(DTGame,"V2/Tifanie BV2")
 }else{
   DTGame <- load_data(DTGame,"123456")
   DTGame <- load_data(DTGame,"kak@shi")
