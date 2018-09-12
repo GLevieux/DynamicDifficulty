@@ -74,6 +74,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"viviane")
   DTGame <- load_data(DTGame,"stephanie")
   DTGame <- load_data(DTGame,"nicole")
+  DTGame <- load_data(DTGame,"pierrec")
 }
 
 
@@ -116,6 +117,11 @@ hist(DTVarModel$variation,main = "Histogram of model variability")
 hist(DTVarModel$niveau,main = "Histogram of player levels")
 
 boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
+
+scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
+mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
+
+cor(DTVarModel$variation, DTVarModel$niveau)
 
 ```
 
