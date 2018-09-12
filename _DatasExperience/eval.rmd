@@ -57,10 +57,10 @@ if(V2 == TRUE)
 }else{
   DTGame <- load_data(DTGame,"123456") #Homme
   DTGame <- load_data(DTGame,"kak@shi") #Homme 31
+  DTGame <- load_data(DTGame,"william") #Homme 24
   DTGame <- load_data(DTGame,"Clement") #Homme  
   DTGame <- load_data(DTGame,"Cronuk") #Homme 24
   DTGame <- load_data(DTGame,"thomas") #Homme 32
-  DTGame <- load_data(DTGame,"william") #Homme 24
   DTGame <- load_data(DTGame,"guillaume") #Homme 35
   DTGame <- load_data(DTGame,"TB") #Femme
   DTGame <- load_data(DTGame,"helene") #Femme 36
@@ -82,6 +82,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"sandra") #Femme 
   DTGame <- load_data(DTGame,"simon chauvin") #Homme 
   DTGame <- load_data(DTGame,"stephaner") #Homme 35
+  DTGame <- load_data(DTGame,"stan") #Homme 24
   
 }
 
