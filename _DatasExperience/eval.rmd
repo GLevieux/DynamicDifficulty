@@ -54,10 +54,11 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/CronukV2")
   DTGame <- load_data(DTGame,"V2/AntoineV2")
   DTGame <- load_data(DTGame,"V2/Tifanie BV2")
+  DTGame <- load_data(DTGame,"V2/simon chauvinV2")
 }else{
-  DTGame <- load_data(DTGame,"123456")
-  DTGame <- load_data(DTGame,"kak@shi")
-  DTGame <- load_data(DTGame,"Clement")
+  #DTGame <- load_data(DTGame,"123456")
+  #DTGame <- load_data(DTGame,"kak@shi")
+  #DTGame <- load_data(DTGame,"Clement")
   DTGame <- load_data(DTGame,"Cronuk")
   DTGame <- load_data(DTGame,"thomas")
   DTGame <- load_data(DTGame,"william")
@@ -80,8 +81,9 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"subhi") #Homme 
   DTGame <- load_data(DTGame,"faten") #Femme 
   DTGame <- load_data(DTGame,"sandra") #Femme 
-  DTGame <- load_data(DTGame,"simon chauvin") #Homme 
+  DTGame <- load_data(DTGame,"simon chauvin") #Homme 32
   DTGame <- load_data(DTGame,"stephaner") #Homme 35
+  DTGame <- load_data(DTGame,"Cedric B") #Homme 38
   
 }
 
@@ -120,9 +122,11 @@ boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
 boxplot(DTVarModel$variation,main = "Boxplot of player variation")
 
 scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
-mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
-
 cor(DTVarModel$variation, DTVarModel$niveau)
+mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
+summary(mdl)
+
+
 
 ```
 
