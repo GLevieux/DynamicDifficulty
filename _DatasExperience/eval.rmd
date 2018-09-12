@@ -60,7 +60,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/simon chauvinV2", 1,32)
     DTGame <- load_data(DTGame,"V2/stephanieV2"  , 0,33)
 }else{
-  DTGame <- load_data(DTGame,"123456"       , 1,-1)
+  DTGame <- load_data(DTGame,"123456"       , 1,-1) #####
   DTGame <- load_data(DTGame,"kak@shi"      , 1,31)
   DTGame <- load_data(DTGame,"Clement"      , 1,26)
   DTGame <- load_data(DTGame,"Cronuk"       , 1,24)
@@ -75,7 +75,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"spotblue"     , 1,25)
   DTGame <- load_data(DTGame,"Indromak"     , 1,29)
   DTGame <- load_data(DTGame,"Roro"         , 0,21)
-  DTGame <- load_data(DTGame,"ak"           , 0,-1) 
+  DTGame <- load_data(DTGame,"ak"           , 0,-1) #####
   DTGame <- load_data(DTGame,"viviane"      , 0,60) 
   DTGame <- load_data(DTGame,"stephanie"    , 0,33) 
   DTGame <- load_data(DTGame,"nicole"       , 0,32) 
