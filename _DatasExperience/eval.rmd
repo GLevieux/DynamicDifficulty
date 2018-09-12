@@ -24,6 +24,7 @@ load_data <- function(DTGame, name, sexe, age){
   DT$fail = 1-DT$win
   DT$sexe = sexe
   DT$age = age
+  DT$TimeNorm = as.numeric(as.POSIXct(DT$Time)) - as.numeric(as.POSIXct(DT[1]$Time))
   
   DT$variation.Model = 0
   DT$step = 1:nrow(DT)
@@ -58,7 +59,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/AntoineV2"      , 1,23)
   DTGame <- load_data(DTGame,"V2/Tifanie BV2"    , 0,34)
   DTGame <- load_data(DTGame,"V2/simon chauvinV2", 1,32)
-    DTGame <- load_data(DTGame,"V2/stephanieV2"  , 0,33)
+  DTGame <- load_data(DTGame,"V2/stephanieV2"  , 0,33)
 }else{
   DTGame <- load_data(DTGame,"123456"       , 1,-1) #####
   DTGame <- load_data(DTGame,"kak@shi"      , 1,31)
@@ -153,25 +154,28 @@ meanParam07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$param.Diff)
 meanStepsConverge = mean(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 sdStepsConverge = sd(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 nbPlayers = nrow(DTGame[used.Model == 0,.N, by = idPlayer])
-
-
+meanTimeConv = mean(DTGame[used.Model == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
+sdTimeConv = sd(DTGame[used.Model == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
 
 scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
 cor(DTVarModel$variation, DTVarModel$niveau)
 mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
 summary(mdl)
 
-
-DStatsPlayer = DTGame[,.(sexe=mean(sexe),age=mean(age)), by = idPlayer]
+DStatsPlayer = DTGame[,.(time=max(TimeNorm),sexe=mean(sexe),age=mean(age)), by = idPlayer]
 nbHommes = sum(DStatsPlayer$sexe)
 nbFemmes = nrow(DStatsPlayer) - nbHommes
 meanAge = mean(DStatsPlayer$age)
 sdAge = sd(DStatsPlayer$age)
+meanTime = mean(DStatsPlayer$time)
+sdTime = sd(DStatsPlayer$time)
+
+
 
 ```
 
 
-We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`).
+We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes).
 
 Target Diff|Actual Target Diff   | Param           |  p(fail)       |  delta                         | n
 -----------|-------------------- | -------------------------------  | ------------------------------ |------
