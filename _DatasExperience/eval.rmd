@@ -118,6 +118,7 @@ hist(DTVarModel$variation,main = "Histogram of model variability")
 hist(DTVarModel$niveau,main = "Histogram of player levels")
 
 boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
+boxplot(DTVarModel$variation,main = "Boxplot of player variation")
 
 scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
 mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
