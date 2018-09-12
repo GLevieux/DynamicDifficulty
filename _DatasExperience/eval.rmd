@@ -11,16 +11,19 @@ require(ggplot2)
 require(hexbin)
 library(knitr)
 
-V2 <- FALSE
+V2 <- TRUE
+removeOutliers  <- TRUE
 ```
 
 ```{r echo=FALSE}
-load_data <- function(DTGame, name){
+load_data <- function(DTGame, name, sexe, age){
   filename = paste(name, "_log.csv", sep="")
   DT <- as.data.table(read.csv(filename, header = TRUE,sep=";"))
   DT <- head(DT, n=60)
   DT$idPlayer = name
   DT$fail = 1-DT$win
+  DT$sexe = sexe
+  DT$age = age
   
   DT$variation.Model = 0
   DT$step = 1:nrow(DT)
@@ -47,50 +50,82 @@ DTGame <- data.table()
 
 if(V2 == TRUE)
 {
-  DTGame <- load_data(DTGame,"V2/guillaumeV2")
-  DTGame <- load_data(DTGame,"V2/WilliamV2")
-  DTGame <- load_data(DTGame,"V2/thomasV2")
-  DTGame <- load_data(DTGame,"V2/kak@shiV2")
-  DTGame <- load_data(DTGame,"V2/CronukV2")
-  DTGame <- load_data(DTGame,"V2/AntoineV2")
-  DTGame <- load_data(DTGame,"V2/Tifanie BV2")
-  DTGame <- load_data(DTGame,"V2/simon chauvinV2")
+  DTGame <- load_data(DTGame,"V2/guillaumeV2"    , 1,36)
+  DTGame <- load_data(DTGame,"V2/WilliamV2"      , 1,-1)
+  DTGame <- load_data(DTGame,"V2/thomasV2"       , 1,-1)
+  DTGame <- load_data(DTGame,"V2/kak@shiV2"      ,-1, 0)
+  DTGame <- load_data(DTGame,"V2/CronukV2"       ,-1, 0)
+  DTGame <- load_data(DTGame,"V2/AntoineV2"      , 1,23)
+  DTGame <- load_data(DTGame,"V2/Tifanie BV2"    , 0,-1)
+  DTGame <- load_data(DTGame,"V2/simon chauvinV2", 1,32)
 }else{
-  #DTGame <- load_data(DTGame,"123456")
-  #DTGame <- load_data(DTGame,"kak@shi")
-  #DTGame <- load_data(DTGame,"Clement")
-  DTGame <- load_data(DTGame,"Cronuk")
-  DTGame <- load_data(DTGame,"thomas")
-  DTGame <- load_data(DTGame,"william")
-  DTGame <- load_data(DTGame,"guillaume") #Homme 35
-  DTGame <- load_data(DTGame,"TB")
-  DTGame <- load_data(DTGame,"helene") #Femme 36
-  DTGame <- load_data(DTGame,"olivier")
-  DTGame <- load_data(DTGame,"Lauren")
- 
-  DTGame <- load_data(DTGame,"Antoine")
-  DTGame <- load_data(DTGame,"spotblue")
-  DTGame <- load_data(DTGame,"Indromak")
-  DTGame <- load_data(DTGame,"Roro")
-  DTGame <- load_data(DTGame,"ak") 
-  DTGame <- load_data(DTGame,"viviane") #Femme
-  DTGame <- load_data(DTGame,"stephanie") #Femme
-  DTGame <- load_data(DTGame,"nicole") #Femme
-  DTGame <- load_data(DTGame,"pierrec") #Homme
-  DTGame <- load_data(DTGame,"pierrep") #Homme
-  DTGame <- load_data(DTGame,"subhi") #Homme 
-  DTGame <- load_data(DTGame,"faten") #Femme 
-  DTGame <- load_data(DTGame,"sandra") #Femme 
-  DTGame <- load_data(DTGame,"simon chauvin") #Homme 32
-  DTGame <- load_data(DTGame,"stephaner") #Homme 35
-  DTGame <- load_data(DTGame,"Cedric B") #Homme 38
-  
+  DTGame <- load_data(DTGame,"123456"       ,-1,-1)
+  DTGame <- load_data(DTGame,"kak@shi"      ,-1,-1)
+  DTGame <- load_data(DTGame,"Clement"      , 1,26)
+  DTGame <- load_data(DTGame,"Cronuk"       ,-1,-1)
+  DTGame <- load_data(DTGame,"thomas"       , 1,-1)
+  DTGame <- load_data(DTGame,"william"      , 1,-1)
+  DTGame <- load_data(DTGame,"guillaume"    , 1,35) 
+  DTGame <- load_data(DTGame,"TB"           , 0,-1)
+  DTGame <- load_data(DTGame,"helene"       , 0,36) 
+  DTGame <- load_data(DTGame,"olivier"      , 1,-1) 
+  DTGame <- load_data(DTGame,"Lauren"       , 0,24)
+  DTGame <- load_data(DTGame,"Antoine"      , 1,23) 
+  DTGame <- load_data(DTGame,"spotblue"     ,-1,-1)
+  DTGame <- load_data(DTGame,"Indromak"     ,-1,-1)
+  DTGame <- load_data(DTGame,"Roro"         ,-1,-1)
+  DTGame <- load_data(DTGame,"ak"           ,-1,-1) 
+  DTGame <- load_data(DTGame,"viviane"      , 0,-1) 
+  DTGame <- load_data(DTGame,"stephanie"    , 0,-1) 
+  DTGame <- load_data(DTGame,"nicole"       , 0,-1) 
+  DTGame <- load_data(DTGame,"pierrec"      , 1,45) 
+  DTGame <- load_data(DTGame,"pierrep"      , 1,-1) 
+  DTGame <- load_data(DTGame,"subhi"        , 1,29) 
+  DTGame <- load_data(DTGame,"faten"        , 1,33) 
+  DTGame <- load_data(DTGame,"sandra"       , 0,42) 
+  DTGame <- load_data(DTGame,"simon chauvin", 1,32) 
+  DTGame <- load_data(DTGame,"stephaner"    , 1,35) 
+  DTGame <- load_data(DTGame,"Cedric B"     , 1,38) 
 }
 
 
 plot(DTGame$param.Diff)
 plot(DTGame$target.Diff)
 plot(x=DTGame$step,y=DTGame$variation.Model)
+
+DTVarModel = DTGame[used.Model==1,.(variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
+
+hist(DTVarModel$variation,main = "Histogram of model variability")
+hist(DTVarModel$niveau,main = "Histogram of player levels")
+
+boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
+boxplot(DTVarModel$variation,main = "Boxplot of player variation")
+
+if(removeOutliers == TRUE)
+{
+  #remove outliers
+  outliers = data.table(id=character(0))
+  setkey(outliers,id)
+  
+  #outliers variation
+  outliersVal <- boxplot.stats(DTVarModel$variation)$out
+  if(length(outliersVal) > 0)
+    outliers = merge(outliers,data.table(id=DTVarModel[variation %in% outliersVal]$idPlayer),by=c("id"),all=TRUE)
+  nbOutliersVariation = length(outliersVal)
+  
+  #outliers niveau
+  outliersVal <- boxplot.stats(DTVarModel$niveau)$out
+  if(length(outliersVal) > 0)
+    outliers = merge(outliers,data.table(id=DTVarModel[niveau %in% outliersVal]$idPlayer),by=c("id"),all=TRUE)
+  nbOutliersNiveau = length(outliersVal)
+  
+  nbTotalOutliers = nrow(outliers)
+  
+  DTGame[idPlayer %in% unlist(outliers$id)]
+}
+
+
+
 
 #plot(DTGame$variation.Model,type="l")
 
@@ -113,13 +148,7 @@ meanStepsConverge = mean(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 sdStepsConverge = sd(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 nbPlayers = nrow(DTGame[used.Model == 0,.N, by = idPlayer])
 
-DTVarModel = DTGame[used.Model==1,.(variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
-#barplot(DTVarModel$V1,names.arg=DTVarModel$idPlayer)
-hist(DTVarModel$variation,main = "Histogram of model variability")
-hist(DTVarModel$niveau,main = "Histogram of player levels")
 
-boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
-boxplot(DTVarModel$variation,main = "Boxplot of player variation")
 
 scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
 cor(DTVarModel$variation, DTVarModel$niveau)
@@ -127,11 +156,16 @@ mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
 summary(mdl)
 
 
+DStatsPlayer = DTGame[,.(sexe=mean(sexe),age=mean(age)), by = idPlayer]
+nbHommes = sum(DStatsPlayer$sexe)
+nbFemmes = nrow(DStatsPlayer) - nbHommes
+meanAge = mean(DStatsPlayer$age)
+sdAge = sd(DStatsPlayer$age)
 
 ```
 
 
-We tested `r nbPlayers` players. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`).
+We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`).
 
 Target Diff|Actual Target Diff   | Param           |  p(fail)       |  delta                         | n
 -----------|-------------------- | -------------------------------  | ------------------------------ |------
