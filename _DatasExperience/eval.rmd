@@ -56,11 +56,11 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/Tifanie BV2")
 }else{
   DTGame <- load_data(DTGame,"123456") #Homme
-  DTGame <- load_data(DTGame,"kak@shi") #Homme
-  DTGame <- load_data(DTGame,"Clement") #Homme
-  DTGame <- load_data(DTGame,"Cronuk") #Homme
-  DTGame <- load_data(DTGame,"thomas") #Homme
-  DTGame <- load_data(DTGame,"william") #Homme
+  DTGame <- load_data(DTGame,"kak@shi") #Homme 31
+  DTGame <- load_data(DTGame,"Clement") #Homme  
+  DTGame <- load_data(DTGame,"Cronuk") #Homme 24
+  DTGame <- load_data(DTGame,"thomas") #Homme 32
+  DTGame <- load_data(DTGame,"william") #Homme 24
   DTGame <- load_data(DTGame,"guillaume") #Homme 35
   DTGame <- load_data(DTGame,"TB") #Femme
   DTGame <- load_data(DTGame,"helene") #Femme 36
@@ -68,9 +68,9 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"Lauren") #Femme
  
   DTGame <- load_data(DTGame,"Antoine") #Homme
-  DTGame <- load_data(DTGame,"spotblue") #Homme
-  DTGame <- load_data(DTGame,"Indromak") #Homme
-  DTGame <- load_data(DTGame,"Roro") #Femme
+  DTGame <- load_data(DTGame,"spotblue") #Homme 25
+  DTGame <- load_data(DTGame,"Indromak") #Homme 29
+  DTGame <- load_data(DTGame,"Roro") #Femme 21
   DTGame <- load_data(DTGame,"ak") #Femme
   DTGame <- load_data(DTGame,"viviane") #Femme
   DTGame <- load_data(DTGame,"stephanie") #Femme
