@@ -11,7 +11,7 @@ require(ggplot2)
 require(hexbin)
 library(knitr)
 
-V2 <- TRUE
+V2 <- FALSE
 removeOutliers  <- TRUE
 ```
 
@@ -53,28 +53,28 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/guillaumeV2"    , 1,36)
   DTGame <- load_data(DTGame,"V2/WilliamV2"      , 1,-1)
   DTGame <- load_data(DTGame,"V2/thomasV2"       , 1,-1)
-  DTGame <- load_data(DTGame,"V2/kak@shiV2"      ,-1, 0)
-  DTGame <- load_data(DTGame,"V2/CronukV2"       ,-1, 0)
+  DTGame <- load_data(DTGame,"V2/kak@shiV2"      , 1,31)
+  DTGame <- load_data(DTGame,"V2/CronukV2"       , 1,24)
   DTGame <- load_data(DTGame,"V2/AntoineV2"      , 1,23)
   DTGame <- load_data(DTGame,"V2/Tifanie BV2"    , 0,-1)
   DTGame <- load_data(DTGame,"V2/simon chauvinV2", 1,32)
 }else{
-  DTGame <- load_data(DTGame,"123456"       ,-1,-1)
-  DTGame <- load_data(DTGame,"kak@shi"      ,-1,-1)
+  DTGame <- load_data(DTGame,"123456"       , 1,-1)
+  DTGame <- load_data(DTGame,"kak@shi"      , 1,31)
   DTGame <- load_data(DTGame,"Clement"      , 1,26)
-  DTGame <- load_data(DTGame,"Cronuk"       ,-1,-1)
-  DTGame <- load_data(DTGame,"thomas"       , 1,-1)
-  DTGame <- load_data(DTGame,"william"      , 1,-1)
+  DTGame <- load_data(DTGame,"Cronuk"       , 1,24)
+  DTGame <- load_data(DTGame,"thomas"       , 1,32)
+  DTGame <- load_data(DTGame,"william"      , 1,24)
   DTGame <- load_data(DTGame,"guillaume"    , 1,35) 
   DTGame <- load_data(DTGame,"TB"           , 0,-1)
   DTGame <- load_data(DTGame,"helene"       , 0,36) 
   DTGame <- load_data(DTGame,"olivier"      , 1,-1) 
   DTGame <- load_data(DTGame,"Lauren"       , 0,24)
   DTGame <- load_data(DTGame,"Antoine"      , 1,23) 
-  DTGame <- load_data(DTGame,"spotblue"     ,-1,-1)
-  DTGame <- load_data(DTGame,"Indromak"     ,-1,-1)
-  DTGame <- load_data(DTGame,"Roro"         ,-1,-1)
-  DTGame <- load_data(DTGame,"ak"           ,-1,-1) 
+  DTGame <- load_data(DTGame,"spotblue"     , 1,25)
+  DTGame <- load_data(DTGame,"Indromak"     , 1,29)
+  DTGame <- load_data(DTGame,"Roro"         , 0,21)
+  DTGame <- load_data(DTGame,"ak"           , 0,-1) 
   DTGame <- load_data(DTGame,"viviane"      , 0,-1) 
   DTGame <- load_data(DTGame,"stephanie"    , 0,-1) 
   DTGame <- load_data(DTGame,"nicole"       , 0,-1) 
@@ -86,6 +86,11 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"simon chauvin", 1,32) 
   DTGame <- load_data(DTGame,"stephaner"    , 1,35) 
   DTGame <- load_data(DTGame,"Cedric B"     , 1,38) 
+  DTGame <- load_data(DTGame,"Choucapitch"  , 0,24) 
+  DTGame <- load_data(DTGame,"ALIZEE"       , 0,20) 
+  DTGame <- load_data(DTGame,"Stan"         , 1,24) 
+  DTGame <- load_data(DTGame,"Alexis"       , 1,23) 
+  DTGame <- load_data(DTGame,"Florian"      , 1,22) 
 }
 
 
@@ -121,7 +126,7 @@ if(removeOutliers == TRUE)
   
   nbTotalOutliers = nrow(outliers)
   
-  DTGame[idPlayer %in% unlist(outliers$id)]
+  DTGame = DTGame[!(idPlayer %in% unlist(outliers$id))]
 }
 
 
