@@ -43,7 +43,7 @@ load_data <- function(DTGame, name, sexe, age){
     variationTotale = variationTotale + sqrt(delta/length(seq(0.1,0.9,0.05)))
   }
   
-  DT$variation.Model.Total = variationTotale / nrow(DT)
+  DT$variation.Model.Total = variationTotale / (nrow(DT)-1)
   
   if(ncol(DTGame) != 0)
     DT <- merge(DTGame,DT, all=TRUE)
@@ -218,9 +218,9 @@ for(i in 1:nrow(DTLevel)){
                   IDjoueur = DTLevel[i]$idPlayer,
                   estDiff = predicted)
   if(i==1){
-    p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0)) + xlim(0,1) + ylim(0,1)
+    p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0-DT$variation*15)) + xlim(0,1) + ylim(0,1)
   } else {
-    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0))
+    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0-DT$variation*15))
   }
 }
 
