@@ -29,6 +29,7 @@ load_data <- function(DTGame, name, sexe, age){
   DT$variation.Model = 0
   DT$step = as.numeric(1:nrow(DT))
   
+  variationTotale = 0
   for( i in 2:nrow(DT)){
     beta0i = DT[i]$beta0;
     beta1i = DT[i]$beta1;
@@ -38,8 +39,11 @@ load_data <- function(DTGame, name, sexe, age){
     delta = 0;
     for (x in seq(0.1,0.9,0.05))
       delta = delta + (1/(1+exp(-(beta0i+beta1i*x))) - 1/(1+exp(-(beta0iprev+beta1iprev*x))))^2
-    DT[i]$variation.Model = sqrt(delta/length(seq(0.1,0.9,0.05)));
+    DT[i]$variation.Model = sqrt(delta/length(seq(0.1,0.9,0.05)))
+    variationTotale = variationTotale + sqrt(delta/length(seq(0.1,0.9,0.05)))
   }
+  
+  DT$variation.Model.Total = variationTotale / nrow(DT)
   
   if(ncol(DTGame) != 0)
     DT <- merge(DTGame,DT, all=TRUE)
@@ -124,6 +128,9 @@ boxplot(DTVarModel$variation, main = "Boxplot of player variation")
 stripchart(DTVarModel$variation, vertical = TRUE,  
     method = "jitter", jitter=0.05, add = TRUE, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.4))
 
+nbOutliersVariation = 0
+nbOutliersNiveau = 0
+nbTotalOutliers = 0
 if(removeOutliers == TRUE)
 {
   #remove outliers
@@ -207,72 +214,18 @@ for(i in 1:nrow(DTLevel)){
   }
     
   DT = data.table(difficulty=diffs,
+                  variation = DTLevel[i]$variation.Model.Total,
                   IDjoueur = DTLevel[i]$idPlayer,
                   estDiff = predicted)
   if(i==1){
-    p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(0.1, 0.2, 0.8, 0.3)) + xlim(0,1) + ylim(0,1)
+    p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0)) + xlim(0,1) + ylim(0,1)
   } else {
-    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(0.1, 0.2, 0.8, 0.3))
+    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0))
   }
 }
 
 print(p)
 
-  # if(groups){
-  #   DTLevel[niveau.group=="bad",group.color:=as.character("yellow")]
-  #   DTLevel[niveau.group=="medium",group.color:=as.character("cyan")]
-  #   DTLevel[niveau.group=="good",group.color:=as.character("green")]
-  # }else{
-  #   DTLevel[niveau.group=="bad",group.color:=as.character("black")]
-  #   DTLevel[niveau.group=="medium",group.color:=as.character("black")]
-  #   DTLevel[niveau.group=="good",group.color:=as.character("black")]
-  # }
-  # 
-  # for(i in 1:nrow(DTLevel)){
-  #   sample = data.frame(difficulty=seq(0, 1, 0.05),IDjoueur=DTLevel[i]$IDjoueur, timeNorm=time)#TODO plusieurs temps
-  #   newres = predict(fit, newdata = sample, type = "response")
-  #   DT = data.table(difficulty=seq(0, 1, 0.05),
-  #                   IDjoueur = DTLevel[i]$IDjoueur, 
-  #                   estDiff = newres,  
-  #                   group.color = DTLevel[i]$group.color)
-  #   if(i==1){
-  #     p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=DT$group.color) + xlim(0,1) + ylim(0,1)
-  #   } else {
-  #     p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,size=1,colour=DT$group.color)
-  #   }
-  # }
-  # 
-  # DTLevel = DTLevel[order(abs(niveau))];
-  # joueurMed = DTLevel[1]$IDjoueur
-  # 
-  # level.quants = quantile(DTLevel$niveau,probs = seq(0, 1, 0.25))
-  # print(level.quants)
-  # DTLevel = DTLevel[order(abs(niveau - (level.quants[2])))];
-  # joueurMin = DTLevel[1]$IDjoueur
-  # DTLevel = DTLevel[order(abs(niveau - (level.quants[4])))];
-  # joueurMax = DTLevel[1]$IDjoueur
-  # 
-  # 
-  # sample = data.frame(difficulty=seq(0, 1, 0.05),IDjoueur=joueurMed, timeNorm=time)
-  # newres = predict(fit, newdata = sample, type = "response")
-  # DTDraw = data.table(difficulty=seq(0, 1, 0.05),IDjoueur = joueurMed, estDiff = newres)
-  # p = p + geom_path(x=DTDraw$difficulty,y=DTDraw$estDiff,colour="blue",size=1.3,linetype="dashed")
-  # 
-  # sample = data.frame(difficulty=seq(0, 1, 0.05),IDjoueur=joueurMin, timeNorm=time)
-  # newres = predict(fit, newdata = sample, type = "response")
-  # DTDraw = data.table(difficulty=seq(0, 1, 0.05),IDjoueur = joueurMin, estDiff = newres)
-  # p = p + geom_path(x=DTDraw$difficulty,y=DTDraw$estDiff,colour="red",size=1.01,linetype="dashed")
-  # 
-  # sample = data.frame(difficulty=seq(0, 1, 0.05),IDjoueur=joueurMax, timeNorm=time)
-  # newres = predict(fit, newdata = sample, type = "response")
-  # DTDraw = data.table(difficulty=seq(0, 1, 0.05),IDjoueur = joueurMax, estDiff = newres)
-  # p = p + geom_path(x=DTDraw$difficulty,y=DTDraw$estDiff,colour="red",size=1.01,linetype="dashed")
-  # 
-  # p <- p + theme(legend.position="none")
-  # 
-  # p <- p + xlab("Variable de difficulté") + ylab(paste("Difficulté objective à t=",time)) + theme(text = element_text(size=20))
-  # 
-  # print(p)
 
 
 
