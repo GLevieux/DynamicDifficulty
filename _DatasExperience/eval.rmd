@@ -11,7 +11,7 @@ require(ggplot2)
 require(hexbin)
 library(knitr)
 
-V2 <- TRUE
+V2 <- FALSE
 removeOutliers  <- TRUE
 ```
 
@@ -36,9 +36,9 @@ load_data <- function(DTGame, name, sexe, age){
     beta1iprev = DT[i-1]$beta1;
   
     delta = 0;
-    for (x in seq(0.1,0.9,0.1))
+    for (x in seq(0.1,0.9,0.05))
       delta = delta + (1/(1+exp(-(beta0i+beta1i*x))) - 1/(1+exp(-(beta0iprev+beta1iprev*x))))^2
-    DT[i]$variation.Model = sqrt(delta/length(seq(0.1,0.9,0.1)));
+    DT[i]$variation.Model = sqrt(delta/length(seq(0.1,0.9,0.05)));
   }
   
   if(ncol(DTGame) != 0)
@@ -100,17 +100,28 @@ if(V2 == TRUE)
 }
 
 
+par(pin=c(2.5,2.5))
+
 plot(DTGame$param.Diff)
 plot(DTGame$target.Diff)
-plot(x=DTGame$step,y=DTGame$variation.Model)
+plot(x=DTGame$step,y=DTGame$variation.Model, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.2))
 
 DTVarModel = DTGame[used.Model==1,.(variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
 
 hist(DTVarModel$variation,main = "Histogram of model variability")
 hist(DTVarModel$niveau,main = "Histogram of player levels")
 
-boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
-boxplot(DTVarModel$variation,main = "Boxplot of player variation")
+#boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
+#boxplot(DTVarModel$variation,main = "Boxplot of player variation")
+
+
+boxplot(DTVarModel$niveau, main = "Boxplot of player levels")
+stripchart(DTVarModel$niveau, vertical = TRUE,  
+    method = "jitter", jitter=0.05, add = TRUE, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.4))
+
+boxplot(DTVarModel$variation, main = "Boxplot of player variation")
+stripchart(DTVarModel$variation, vertical = TRUE,  
+    method = "jitter", jitter=0.05, add = TRUE, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.4))
 
 if(removeOutliers == TRUE)
 {
@@ -133,9 +144,14 @@ if(removeOutliers == TRUE)
   nbTotalOutliers = nrow(outliers)
   
   DTGame = DTGame[!(idPlayer %in% unlist(outliers$id))]
+  DTVarModel = DTVarModel[!(idPlayer %in% unlist(outliers$id))]
+
 }
+hist(DTVarModel$niveau,main = "Histogram of player levels without outliers", breaks = 6)
+boxplot(DTVarModel$niveau,main = "Boxplot of player levels without outliers")
+boxplot(DTVarModel$variation,main = "Boxplot of player variation without outliers")
 
-
+plot(jitter(rep(1, nrow(DTVarModel))), DTVarModel$niveau , pch=20, col=rgb(0.1, 0.2, 0.8, 0.3) , xlab="X", ylab="Y", bty="n",xlim=c(0.5,1.5) )
 
 
 #plot(DTGame$variation.Model,type="l")
@@ -165,6 +181,7 @@ scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
 cor(DTVarModel$variation, DTVarModel$niveau)
 mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
 summary(mdl)
+plot(mdl)
 
 DStatsPlayer = DTGame[,.(time=max(TimeNorm),sexe=mean(sexe),age=mean(age)), by = idPlayer]
 nbHommes = sum(DStatsPlayer$sexe)
@@ -173,6 +190,8 @@ meanAge = mean(DStatsPlayer$age)
 sdAge = sd(DStatsPlayer$age)
 meanTime = mean(DStatsPlayer$time)
 sdTime = sd(DStatsPlayer$time)
+
+
 
 
 
