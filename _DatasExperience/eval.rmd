@@ -212,7 +212,7 @@ for(i in 1:nrow(DTLevel)){
   if(i==1){
     p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(0.1, 0.2, 0.8, 0.3)) + xlim(0,1) + ylim(0,1)
   } else {
-    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,size=1,colour=rgb(0.1, 0.2, 0.8, 0.3))
+    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(0.1, 0.2, 0.8, 0.3))
   }
 }
 
