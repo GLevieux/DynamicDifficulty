@@ -95,8 +95,8 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"Stan"         , 1,24) 
   DTGame <- load_data(DTGame,"Alexis"       , 1,23) 
   DTGame <- load_data(DTGame,"Florian"      , 1,22) 
-  DTGame <- load_data(DTGame,"Romain"       , 1,30) 
-  DTGame <- load_data(DTGame,"gaga"         , 1,30) 
+  DTGame <- load_data(DTGame,"Romain"       , 1,30) ####
+  DTGame <- load_data(DTGame,"gaga"         , 1,30) ####
 }
 
 
