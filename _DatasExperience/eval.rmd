@@ -202,7 +202,61 @@ sdTime = sd(DStatsPlayer$time)
 
 #on trace les courbes de niveau des joueurs
 
+
+DTLevel <- DTGame[step==40]
+for(i in 1:nrow(DTLevel)){
+  diffs = seq(0, 1, 0.01)
+  predicted = rep(0,length(diffs))
+  beta0 = DTLevel[i]$beta0
+  beta1 = DTLevel[i]$beta1
+  for(j in 1:length(diffs)){
+    x = diffs[j]
+    predicted[j] = 1-(1/(1+exp(-(beta0+beta1*x))))
+  }
+    
+  DT = data.table(difficulty=diffs,
+                  variation = DTLevel[i]$variation.Model.Total,
+                  IDjoueur = DTLevel[i]$idPlayer,
+                  estDiff = predicted)
+  if(i==1){
+    p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(0.1, 0.2, 0.8, 0.3)) + xlim(0,1) + ylim(0,1)
+  } else {
+    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(0.1, 0.2, 0.8, 0.3))
+  }
+}
+
+print(p)
+
+
 DTLevel <- DTGame[step==60]
+meanVarTotal = mean(DTLevel$variation.Model.Total)
+DTLevel = DTLevel[variation.Model.Total<meanVarTotal]
+for(i in 1:nrow(DTLevel)){
+  diffs = seq(0, 1, 0.01)
+  predicted = rep(0,length(diffs))
+  beta0 = DTLevel[i]$beta0
+  beta1 = DTLevel[i]$beta1
+  for(j in 1:length(diffs)){
+    x = diffs[j]
+    predicted[j] = 1-(1/(1+exp(-(beta0+beta1*x))))
+  }
+    
+  DT = data.table(difficulty=diffs,
+                  variation = DTLevel[i]$variation.Model.Total,
+                  IDjoueur = DTLevel[i]$idPlayer,
+                  estDiff = predicted)
+  if(i==1){
+    p = ggplot(DT,aes(x=difficulty,y=estDiff)) + geom_path(alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0-DT$variation*15)) + xlim(0,1) + ylim(0,1)
+  } else {
+    p = p + geom_path(x=DT$difficulty,y=DT$estDiff, alpha = 0.2,colour=rgb(DT$variation*15, 0.0, 0.0, 1.0-DT$variation*15))
+  }
+}
+
+print(p)
+
+DTLevel <- DTGame[step==60]
+meanVarTotal = mean(DTLevel$variation.Model.Total)
+DTLevel = DTLevel[variation.Model.Total>meanVarTotal]
 for(i in 1:nrow(DTLevel)){
   diffs = seq(0, 1, 0.01)
   predicted = rep(0,length(diffs))
