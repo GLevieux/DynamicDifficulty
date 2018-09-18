@@ -29,6 +29,8 @@ load_data <- function(DTGame, name, sexe, age){
   DT$variation.Model = 0
   DT$step = as.numeric(1:nrow(DT))
   
+  DT$p.echec.explo = mean(DT[used.Model == 0]$fail)
+  
   variationTotale = 0
   for( i in 2:nrow(DT)){
     beta0i = DT[i]$beta0
@@ -120,16 +122,19 @@ par(pin=c(2.5,2.5))
 
 plot(DTGame$param.Diff)
 plot(DTGame$target.Diff)
-plot(x=DTGame$step,y=DTGame$variation.Model, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.2))
+plot(x=DTGame$step,y=DTGame$variation.Model, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.2), xlab="Game Step", ylab="Model Variation")
+plot(x=DTGame$step,y=DTGame$param.Diff, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.2), xlab="Game Step", ylab="Difficulty Parameter (theta)")
 
-DTVarModel = DTGame[used.Model==1,.(variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
+DTVarModel = DTGame[used.Model==1,.(p.echec.explo=mean(p.echec.explo),variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
 
-hist(DTVarModel$variation,main = "Histogram of model variability")
-hist(DTVarModel$niveau,main = "Histogram of player levels")
+hist(DTVarModel$variation,main = "Histogram of model variability", xlab="Model Variability")
+hist(DTVarModel$niveau,main = "Histogram of player levels"
+     , xlab="Player Level")
 
 #boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
 #boxplot(DTVarModel$variation,main = "Boxplot of player variation")
 
+quantile(DTVarModel$niveau, c(1,3)/4)
 
 boxplot(DTVarModel$niveau, main = "Boxplot of player levels")
 stripchart(DTVarModel$niveau, vertical = TRUE,  
@@ -138,6 +143,12 @@ stripchart(DTVarModel$niveau, vertical = TRUE,
 boxplot(DTVarModel$variation, main = "Boxplot of player variation")
 stripchart(DTVarModel$variation, vertical = TRUE,  
     method = "jitter", jitter=0.05, add = TRUE, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.4))
+
+boxplot(DTVarModel$p.echec.explo, main = "Difficulty during exploration")
+stripchart(DTVarModel$p.echec.explo, vertical = TRUE,  
+    method = "jitter", jitter=0.05, add = TRUE, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.4))
+
+hist(DTVarModel$p.echec.explo, xlab="Failure Probability during exploration")
 
 nbOutliersVariation = 0
 nbOutliersNiveau = 0
@@ -217,6 +228,7 @@ sdTime = sd(DStatsPlayer$time)
 
 
 DTLevel <- DTGame[step==60]
+DTLevel$diffAtParam0.5 = 0
 for(i in 1:nrow(DTLevel)){
   diffs = seq(0, 1, 0.01)
   predicted = rep(0,length(diffs))
@@ -226,6 +238,8 @@ for(i in 1:nrow(DTLevel)){
     x = diffs[j]
     predicted[j] = 1-(1/(1+exp(-(beta0+beta1*x))))
   }
+  
+  DTLevel[i]$diffAtParam0.5 = 1-(1/(1+exp(-(beta0+beta1*0.5))))
     
   DT = data.table(difficulty=diffs,
                   variation = DTLevel[i]$variation.Model.Total,
@@ -239,6 +253,11 @@ for(i in 1:nrow(DTLevel)){
 }
 
 print(p)
+
+#on donne en gros la probabilité d'échec pour theta = 0.5
+hist(DTLevel$diffAtParam0.5, xlab="Failure Probability for Difficulty Parameter at 0.5")
+
+
 
 
 DTLevel <- DTGame[step==60]
