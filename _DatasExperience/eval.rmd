@@ -81,7 +81,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"V2/RomainV2"       , 0,33)
   DTGame <- load_data(DTGame,"V2/gagaV2"         , 0,33)
 }else{
-  DTGame <- load_data(DTGame,"123456"       , 1,-1) #####
+  DTGame <- load_data(DTGame,"123456"       , 1,24)
   DTGame <- load_data(DTGame,"kak@shi"      , 1,31)
   DTGame <- load_data(DTGame,"Clement"      , 1,26)
   DTGame <- load_data(DTGame,"Cronuk"       , 1,24)
@@ -96,7 +96,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"spotblue"     , 1,25)
   DTGame <- load_data(DTGame,"Indromak"     , 1,29)
   DTGame <- load_data(DTGame,"Roro"         , 0,21)
-  DTGame <- load_data(DTGame,"ak"           , 0,-1) #####
+  DTGame <- load_data(DTGame,"ak"           , 0,20)
   DTGame <- load_data(DTGame,"viviane"      , 0,60) 
   DTGame <- load_data(DTGame,"stephanie"    , 0,33) 
   DTGame <- load_data(DTGame,"nicole"       , 0,32) 
@@ -115,6 +115,8 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"Florian"      , 1,22) 
   DTGame <- load_data(DTGame,"Romain"       , 1,32) 
   DTGame <- load_data(DTGame,"gaga"         , 1,33) 
+  DTGame <- load_data(DTGame,"AntoineFac"   , 1,23) 
+  DTGame <- load_data(DTGame,"Jerome"       , 1,25) 
 }
 
 
@@ -122,14 +124,15 @@ par(pin=c(2.5,2.5))
 
 plot(DTGame$param.Diff)
 plot(DTGame$target.Diff)
-plot(x=DTGame$step,y=DTGame$variation.Model, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.2), xlab="Game Step", ylab="Model Variation")
-plot(x=DTGame$step,y=DTGame$param.Diff, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.2), xlab="Game Step", ylab="Difficulty Parameter (theta)")
+plot(x=DTGame$step,y=DTGame$variation.Model, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), xlab="Game Step", ylab="Model Variation")
 
 DTVarModel = DTGame[used.Model==1,.(p.echec.explo=mean(p.echec.explo),variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
 
 hist(DTVarModel$variation,main = "Histogram of model variability", xlab="Model Variability")
 hist(DTVarModel$niveau,main = "Histogram of player levels"
      , xlab="Player Level")
+
+
 
 #boxplot(DTVarModel$niveau,main = "Boxplot of player levels")
 #boxplot(DTVarModel$variation,main = "Boxplot of player variation")
@@ -149,6 +152,15 @@ stripchart(DTVarModel$p.echec.explo, vertical = TRUE,
     method = "jitter", jitter=0.05, add = TRUE, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.4))
 
 hist(DTVarModel$p.echec.explo, xlab="Failure Probability during exploration")
+
+DStatsPlayer = DTGame[,.(time=max(TimeNorm),sexe=mean(sexe),age=mean(age)), by = idPlayer]
+nbHommes = sum(DStatsPlayer$sexe)
+nbFemmes = nrow(DStatsPlayer) - nbHommes
+meanAge = mean(DStatsPlayer$age)
+sdAge = sd(DStatsPlayer$age)
+meanTime = mean(DStatsPlayer$time)
+sdTime = sd(DStatsPlayer$time)
+nbPlayers = nrow(DTGame[used.Model == 0,.N, by = idPlayer])
 
 nbOutliersVariation = 0
 nbOutliersNiveau = 0
@@ -185,27 +197,36 @@ boxplot(DTVarModel$variation,main = "Boxplot of player variation without outlier
 
 plot(jitter(rep(1, nrow(DTVarModel))), DTVarModel$niveau , pch=20, col=rgb(0.1, 0.2, 0.8, 0.3) , xlab="X", ylab="Y", bty="n",xlim=c(0.5,1.5) )
 
+meanaccuracy = mean(DTGame[used.Model==1]$accuracy)
+sdaccuracy = sd(DTGame[used.Model==1]$accuracy)
+
+plot(x=DTGame$step,y=DTGame$param.Diff, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), xlab="Game Step", ylab="Difficulty Parameter (theta)")
+png("Figures/crossval.png")
+plot(x=DTGame$step,y=DTGame$accuracy, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), xlab="Game Step", ylab="Accuracy (Cross-Validation)")
+dev.off()
 
 #plot(DTGame$variation.Model,type="l")
 
 meanFail02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$fail)
 meanTarget02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
+sdTarget02 = sd(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
 nTarget02 = length(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
 meanParam02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$param.Diff)
 
 meanFail05 = mean(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$fail)
 meanTarget05 = mean(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$target.Diff)
+sdTarget05 = sd(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$target.Diff)
 nTarget05 = length(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$target.Diff)
 meanParam05 = mean(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$param.Diff)
 
 meanFail07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$fail)
 meanTarget07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$target.Diff)
+sdTarget07 = sd(DTGame[target.Diff > 0.6 & used.Model == 1]$target.Diff)
 nTarget07 = length(DTGame[target.Diff > 0.6 & used.Model == 1]$target.Diff)
 meanParam07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$param.Diff)
 
 meanStepsConverge = mean(DTGame[used.Model == 0,.N, by = idPlayer]$N)
 sdStepsConverge = sd(DTGame[used.Model == 0,.N, by = idPlayer]$N)
-nbPlayers = nrow(DTGame[used.Model == 0,.N, by = idPlayer])
 meanTimeConv = mean(DTGame[used.Model == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
 sdTimeConv = sd(DTGame[used.Model == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
 
@@ -215,13 +236,7 @@ mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
 summary(mdl)
 plot(mdl)
 
-DStatsPlayer = DTGame[,.(time=max(TimeNorm),sexe=mean(sexe),age=mean(age)), by = idPlayer]
-nbHommes = sum(DStatsPlayer$sexe)
-nbFemmes = nrow(DStatsPlayer) - nbHommes
-meanAge = mean(DStatsPlayer$age)
-sdAge = sd(DStatsPlayer$age)
-meanTime = mean(DStatsPlayer$time)
-sdTime = sd(DStatsPlayer$time)
+
 
 
 #on trace les courbes de niveau des joueurs
@@ -318,13 +333,13 @@ print(p)
 ```
 
 
-We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes).
+We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes). Une fois les outliers enlevé, et quand on utilise le modele, l'accuracy est en moyenne de `r meanaccuracy`(sd = `r sdaccuracy`)
 
-Target Diff|Actual Target Diff   | Param           |  p(fail)       |  delta                         | n
------------|-------------------- | -------------------------------  | ------------------------------ |------
-0.2        |   `r meanTarget02`  | `r meanParam02` | `r meanFail02` |  `r meanTarget02-meanFail02`   | `r nTarget02`  
-0.5        |   `r meanTarget05`  | `r meanParam05` | `r meanFail05` |  `r meanTarget05-meanFail05`   | `r nTarget05`
-0.7        |   `r meanTarget07`  | `r meanParam07` | `r meanFail07` |  `r meanTarget07-meanFail07`   | `r nTarget07`
+Target Diff|Actual Target Diff  |Target Diff SD  | Param           |  p(fail)       |  delta                         | n
+-----------|------------------------------------ | ----------------|--------------  | ------------------------------ |------
+0.2        |   `r meanTarget02` | `r sdTarget02` | `r meanParam02` | `r meanFail02` |  `r meanTarget02-meanFail02`   | `r nTarget02`  
+0.5        |   `r meanTarget05` | `r sdTarget05` | `r meanParam05` | `r meanFail05` |  `r meanTarget05-meanFail05`   | `r nTarget05`
+0.7        |   `r meanTarget07` | `r sdTarget07` | `r meanParam07` | `r meanFail07` |  `r meanTarget07-meanFail07`   | `r nTarget07`
 
 For each player, we computed the mean variation of model predictions when the model was used : `r kable(DTVarModel[order(niveau)])`
 
