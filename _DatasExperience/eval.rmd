@@ -20,6 +20,8 @@ load_data <- function(DTGame, name, sexe, age){
   filename = paste(name, "_log.csv", sep="")
   DT <- as.data.table(read.csv(filename, header = TRUE,sep=";"))
   DT <- head(DT, n=60)
+  DT$step = as.numeric(DT$step)
+  DT = DT[order(step)]
   DT$idPlayer = name
   DT$fail = 1-DT$win
   DT$sexe = sexe
@@ -30,7 +32,14 @@ load_data <- function(DTGame, name, sexe, age){
   DT$step = as.numeric(1:nrow(DT))
   
   DT$p.echec.explo = mean(DT[used.Model == 0]$fail)
-  
+  DT$used.model.once = 0
+  used.model.once.local = 0
+  for( i in 1:nrow(DT)){
+    if(DT[i]$used.Model == 1)
+      used.model.once.local = 1
+    DT[i]$used.model.once = used.model.once.local
+  }
+   
   variationTotale = 0
   for( i in 2:nrow(DT)){
     beta0i = DT[i]$beta0
@@ -117,6 +126,7 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"gaga"         , 1,33) 
   DTGame <- load_data(DTGame,"AntoineFac"   , 1,23) 
   DTGame <- load_data(DTGame,"Jerome"       , 1,25) 
+  DTGame <- load_data(DTGame,"Vil"          , 1,25) 
 }
 
 
@@ -201,9 +211,9 @@ meanaccuracy = mean(DTGame[used.Model==1]$accuracy)
 sdaccuracy = sd(DTGame[used.Model==1]$accuracy)
 
 plot(x=DTGame$step,y=DTGame$param.Diff, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), xlab="Game Step", ylab="Difficulty Parameter (theta)")
-png("Figures/crossval.png")
+
 plot(x=DTGame$step,y=DTGame$accuracy, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), xlab="Game Step", ylab="Accuracy (Cross-Validation)")
-dev.off()
+
 
 #plot(DTGame$variation.Model,type="l")
 
@@ -235,6 +245,11 @@ cor(DTVarModel$variation, DTVarModel$niveau)
 mdl = glm(DTVarModel$variation ~ DTVarModel$niveau)
 summary(mdl)
 plot(mdl)
+#on calcule le nombre de fois que le modèle a switch back from use.model = 1 to use.model = 0
+DTSwitchBack = DTGame[used.Model == 0 & used.model.once == 1,.(nbSwitchBack=mean(.N)),by=idPlayer]
+nb.players.switchback = nrow(DTSwitchBack)
+nb.switch.back.mean = mean(DTSwitchBack$nbSwitchBack)
+nb.switch.back.sd = sd(DTSwitchBack$nbSwitchBack)
 
 
 
@@ -333,7 +348,7 @@ print(p)
 ```
 
 
-We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes). Une fois les outliers enlevé, et quand on utilise le modele, l'accuracy est en moyenne de `r meanaccuracy`(sd = `r sdaccuracy`)
+We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes). Une fois les outliers enlevé, et quand on utilise le modele, l'accuracy est en moyenne de `r meanaccuracy`(sd = `r sdaccuracy`). L'accuracy du modele est passée sous le seuil d'utilisabilité pour `r nb.players.switchback` participants. Moyenne switch back `r nb.switch.back.mean` sd switch back `r nb.switch.back.sd`
 
 Target Diff|Actual Target Diff  |Target Diff SD  | Param           |  p(fail)       |  delta                         | n
 -----------|------------------------------------ | ----------------|--------------  | ------------------------------ |------
