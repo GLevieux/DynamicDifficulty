@@ -15,7 +15,7 @@ require(hexbin)
 sd_succes = 0.1
 nb_players = 1000
 sd_niveau_players = 0.1
-nb_try = 50
+nb_try = 60
 diff_start = 0.1
 
 players = rnorm(nb_players,0.0,sd_niveau_players)

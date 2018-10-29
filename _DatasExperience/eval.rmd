@@ -10,6 +10,7 @@ require(data.table)
 require(ggplot2)
 require(hexbin)
 library(knitr)
+require(lme4)
 
 V2 <- FALSE
 removeOutliers  <- TRUE
@@ -129,6 +130,50 @@ if(V2 == TRUE)
   DTGame <- load_data(DTGame,"Vil"          , 1,25) 
 }
 
+model.objective.diff <- function(DT){
+  model <- glmer(fail ~ param.Diff + (1 + param.Diff | idPlayer), DTGame,family = "binomial"(link = "logit"))
+  
+  #On met ici le vrai nom de la variable passée en argument genre DTM ou DTL car sinon, quand
+  #on calcule le r2 du modele, il doit accéder aux datas. Et dans le modèle, il a stoqué DTM, qui
+  #est une variable locale à cette fonction. Et donc il ne la retrouve pas et plante. Donc on va 
+  #chercher le nom de la variable et on le met de force. An oter que c'est le meme soucis pour ce qu'il
+  #y a dans formula mais on a pas touché 
+  #https://stackoverflow.com/questions/14275664/how-to-use-lmer-inside-a-function
+  dtname <- as.name(deparse(substitute(DT)))
+  model@call$data <- dtname
+  return(model)
+}
+
+#on ajoute la diff prévue par un modèle a effets mixtes
+modelMixte <- model.objective.diff(DTGame)
+sample = data.frame(param.Diff=DTGame$param.Diff, idPlayer=DTGame$idPlayer)
+DTGame$obj.diff.mixte =  predict(modelMixte, newdata = sample, type = "response")
+
+#oon evalue la qualité de cette regression mixte
+get.model.accuracy <- function(DT){
+  DT$cross.val.group = round(runif(nrow(DT),0.5,10.5))
+  totAccuracy <- 0
+  for(i in 1:10){
+    DTModel <-  DT[cross.val.group != i]
+    DTTest <- DT[cross.val.group == i]
+    fit <- model.objective.diff(DTModel)
+    newres = predict(fit, newdata = DTTest, type = "response", allow.new.levels=T)  
+    newres = round(newres)
+    accuracy = abs(newres - DTTest$fail)
+    localAccu = table(accuracy)[[1]]/length(accuracy)
+    totAccuracy <-  totAccuracy + localAccu
+    #print(localAccu)
+  }
+  
+  totAccuracy = totAccuracy / 10
+  return (totAccuracy)
+}
+accu <- get.model.accuracy(DTGame)
+accu.models.separes <- mean(DTGame[step==60]$accuracy)
+
+
+DTGame$qual.target.diff =  DTGame$target.Diff - DTGame$obj.diff.mixte
+hist(DTGame[used.Model == 1]$qual.target.diff)
 
 par(pin=c(2.5,2.5))
 
@@ -139,8 +184,8 @@ plot(x=DTGame$step,y=DTGame$variation.Model, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.
 DTVarModel = DTGame[used.Model==1,.(p.echec.explo=mean(p.echec.explo),variation=mean(variation.Model),niveau=mean(param.Diff)), by = idPlayer]
 
 hist(DTVarModel$variation,main = "Histogram of model variability", xlab="Model Variability")
-hist(DTVarModel$niveau,main = "Histogram of player levels"
-     , xlab="Player Level")
+hist(DTVarModel$niveau,main = "Histogram of player levels", xlab="Player Level")
+hist(DTGame[used.model.once == 0,.(idPlayer = idPlayer,N=.N), by = idPlayer]$N,main = "Histogram of player turn to converge", xlab="Number of turns to converge")
 
 
 
@@ -193,6 +238,20 @@ if(removeOutliers == TRUE)
     outliers = merge(outliers,data.table(id=DTVarModel[niveau %in% outliersVal]$idPlayer),by=c("id"),all=TRUE)
   nbOutliersNiveau = length(outliersVal)
   
+  #outliers used.model
+  #DTNumberUsedModel = DTGame[used.Model == 0,.(idPlayer = idPlayer,N=.N), by = idPlayer]
+  #outliersVal <- boxplot.stats(DTNumberUsedModel$N)$out
+ # if(length(outliersVal) > 0)
+   # outliers = merge(outliers,data.table(id=DTNumberUsedModel[N %in% outliersVal]$idPlayer),by=c("id"),all=TRUE)
+ # nbOutliersNiveau = length(outliersVal)
+  
+    #outliers used.model
+  DTNumberUsedModel = DTGame[used.model.once == 0,.(idPlayer = idPlayer,N=.N), by = idPlayer]
+  outliersVal <- boxplot.stats(DTNumberUsedModel$N)$out
+  if(length(outliersVal) > 0)
+    outliers = merge(outliers,data.table(id=DTNumberUsedModel[N %in% outliersVal]$idPlayer),by=c("id"),all=TRUE)
+  nbOutliersNiveau = length(outliersVal)
+  
   nbTotalOutliers = nrow(outliers)
   
   print(outliers$id)
@@ -215,30 +274,34 @@ plot(x=DTGame$step,y=DTGame$param.Diff, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), 
 plot(x=DTGame$step,y=DTGame$accuracy, pch = 20, col=rgb(0.1, 0.2, 0.8, 0.15), xlab="Game Step", ylab="Accuracy (Cross-Validation)")
 
 
-#plot(DTGame$variation.Model,type="l")
 
+
+#plot(DTGame$variation.Model,type="l")
+fails02 = DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$fail
 meanFail02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$fail)
 meanTarget02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
 sdTarget02 = sd(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
 nTarget02 = length(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$target.Diff)
 meanParam02 = mean(DTGame[target.Diff < 0.4 & target.Diff > 0.1 & used.Model == 1]$param.Diff)
 
+fails05 = DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$fail
 meanFail05 = mean(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$fail)
 meanTarget05 = mean(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$target.Diff)
 sdTarget05 = sd(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$target.Diff)
 nTarget05 = length(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$target.Diff)
 meanParam05 = mean(DTGame[target.Diff > 0.4 & target.Diff < 0.6 & used.Model == 1]$param.Diff)
 
+fails07 = DTGame[target.Diff > 0.6 & used.Model == 1]$fail
 meanFail07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$fail)
 meanTarget07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$target.Diff)
 sdTarget07 = sd(DTGame[target.Diff > 0.6 & used.Model == 1]$target.Diff)
 nTarget07 = length(DTGame[target.Diff > 0.6 & used.Model == 1]$target.Diff)
 meanParam07 = mean(DTGame[target.Diff > 0.6 & used.Model == 1]$param.Diff)
 
-meanStepsConverge = mean(DTGame[used.Model == 0,.N, by = idPlayer]$N)
-sdStepsConverge = sd(DTGame[used.Model == 0,.N, by = idPlayer]$N)
-meanTimeConv = mean(DTGame[used.Model == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
-sdTimeConv = sd(DTGame[used.Model == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
+meanStepsConverge = mean(DTGame[used.model.once == 0,.N, by = idPlayer]$N)
+sdStepsConverge = sd(DTGame[used.model.once == 0,.N, by = idPlayer]$N)
+meanTimeConv = mean(DTGame[used.model.once == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
+sdTimeConv = sd(DTGame[used.model.once == 0,.(time=max(TimeNorm)), by = idPlayer]$time)
 
 scatter.smooth(x=DTVarModel$niveau,y=DTVarModel$variation)
 cor(DTVarModel$variation, DTVarModel$niveau)
@@ -250,6 +313,21 @@ DTSwitchBack = DTGame[used.Model == 0 & used.model.once == 1,.(nbSwitchBack=mean
 nb.players.switchback = nrow(DTSwitchBack)
 nb.switch.back.mean = mean(DTSwitchBack$nbSwitchBack)
 nb.switch.back.sd = sd(DTSwitchBack$nbSwitchBack)
+
+bernouillTest = function(fails){
+  nb1 = sum(fails==1)
+  nb0 = sum(fails==0)
+  prob = nb1/(nb1+nb0)
+  return(binom.test(c(nb1, nb0), p = prob))
+}
+
+#on caulcule a quel point la pobjective de fail pour les 3 niveaux de diff est précise
+qualPObj02 = bernouillTest(fails02)
+print(qualPObj02)
+qualPObj05 = bernouillTest(fails05)
+print(qualPObj05)
+qualPObj07 = bernouillTest(fails07)
+print(qualPObj07)
 
 
 
@@ -342,6 +420,11 @@ for(i in 1:nrow(DTLevel)){
 
 print(p)
 
+#evaluation de la variabilité de beta1 (pent de la courbe)
+DTLevel <- DTGame[step==60]
+print(hist(DTLevel$beta1))
+print(hist(DTLevel$beta0))
+
 
 
 
@@ -357,6 +440,16 @@ Target Diff|Actual Target Diff  |Target Diff SD  | Param           |  p(fail)   
 0.7        |   `r meanTarget07` | `r sdTarget07` | `r meanParam07` | `r meanFail07` |  `r meanTarget07-meanFail07`   | `r nTarget07`
 
 For each player, we computed the mean variation of model predictions when the model was used : `r kable(DTVarModel[order(niveau)])`
+
+
+
+```{r echo=FALSE}
+  
+
+
+```
+
+
 
 
 ```{r echo=FALSE}
