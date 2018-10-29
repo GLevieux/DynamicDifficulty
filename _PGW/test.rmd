@@ -1,0 +1,69 @@
+---
+title: "Paris Games Week"
+output: html_document
+---
+```{r include = FALSE}
+#install.packages("data.table")
+#install.packages("ggplot2")
+
+require(data.table)
+require(ggplot2)
+library(knitr)
+```
+
+Fonctions de chargement...
+```{r echo=FALSE}
+
+load_data <- function(DTGame, id, file){
+  file <- paste("./Datas/",file,sep="")
+  
+  DT <- as.data.table(read.csv(file, header = FALSE,sep=";"))
+  DT$id = id
+  setkey(DT,id)
+  
+  DT[ , delta := (V1 - shift(V1, 1L, type="lag"))]
+  #DT[ , delta2 := abs(delta - shift(delta, 1L, type="lag"))]
+  
+  #Pour savoir si c'est un nouveau joueur, 
+  #on regarde si theta a baissé d'un coup...
+  #mais c'est naze
+  changes = DT[delta < -0.12, which = TRUE]
+  if(length(changes) > 0)
+    DT = head(DT,n=changes[1])
+  
+  
+  #DT[  shift(B, 1L, type="lag")]
+  
+  if(ncol(DTGame) != 0)
+    DT <- rbind(DTGame,DT)
+  
+  
+  return(DT)
+}
+```
+
+Chargement effectif...
+```{r echo=FALSE}
+files = list.files(path = "./Datas", pattern = "[[:alnum:]_-]*Trace[[:alnum:]_-]*.csv")
+
+DTGame <- data.table()
+id = 0
+for(file in files){
+  DTGame <- load_data(DTGame,id,file)
+  id <- id+1
+
+}
+nbJoueurs = nrow(DTGame[,.N,by=id])
+```
+On a chargé `r nbJoueurs` joueurs. 
+
+Traitement :
+```{r echo=FALSE}
+DTStat = DTGame[,.(thetaMoy=mean(V1), diff=1-mean(V2),nombreDeTours=.N),by=id]
+hist(DTStat$nombreDeTours)
+hist(DTStat$thetaMoy)
+plot(x=DTStat$nombreDeTours,y=DTStat$diff)
+```
+
+
+
