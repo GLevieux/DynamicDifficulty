@@ -25,7 +25,6 @@ public class AimCrosshair : MonoBehaviour {
        
         if (plane.Raycast(ray, out distance))
         {
-            Debug.Log("hit!!!");
 
             // some point of the plane was hit - get its coordinates
             Vector3 hitPoint = ray.GetPoint(distance);

@@ -12,7 +12,7 @@ public class LevelManager : MonoBehaviour {
 
     Transform player;
     Transform[] ennemies;
-
+    
     public GameDifficultyManager GDiffManager;
 
     [System.Serializable]
@@ -37,18 +37,25 @@ public class LevelManager : MonoBehaviour {
     private int numLevel = 0;
 
     private int Score = 0;
+    float answer;
+    bool pressed = false;
+
+    GameObject question;
+
 
     IEnumerator nextLevel()
     {
+        pressed = false;
+        question.SetActive(false);
         waitingForNewLevel = true;
         yield return new WaitForSeconds(2);
         createLevel(nextDifficulty);
 
     }
-
+    
     void createLevel(float difficulty)
     {
-
+        
         if (player)
         { 
             Destroy(player.gameObject);
@@ -114,6 +121,8 @@ public class LevelManager : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
+        question = GameObject.Find("Question");
+        question.SetActive(false);
         GDiffManager.setPlayerId("MonSuperJoueur");
         GameObject pm = GameObject.Find("PlayerManager");
         if (pm)
@@ -151,7 +160,8 @@ public class LevelManager : MonoBehaviour {
     void Update() {
         if (waitingForNewLevel)
             return;
-
+        foreach (Button b in question.GetComponentsInChildren<Button>())
+            b.onClick.AddListener(delegate { ClickButton(b); });
         bool end = false;
         bool alldead = false;
         if (!player.gameObject.activeSelf)
@@ -175,51 +185,62 @@ public class LevelManager : MonoBehaviour {
          * */
         if (end)
         {
-            bool win = false;
-            if(alldead && player.gameObject.activeSelf)
-            {
-                win = true;
-                Score++;
+           
+                bool win = false;
+                if (alldead && player.gameObject.activeSelf)
+                {
+                    win = true;
+                }
+                if (win)
+                    TWin.enabled = true;
+                else
+                    TFail.enabled = true;
+
+            question.SetActive(true);
+            if (numLevel == 0) {
+                pressed = true;
+                question.SetActive(false);
             }
-            if (win)
-                TWin.enabled = true;
-            else
-                TFail.enabled = true;
+            if (pressed)
+            {
+                if (win)
+                    Score++;
 
+                double[] betas = GDiffManager.getBetas();
+                if (betas == null)
+                    betas = new double[2];
 
+                this.log(GDiffManager.getPlayerId(),
+                    betas[0],
+                    betas[1],
+                    GDiffManager.getModelQuality(),
+                    GDiffManager.isUsingLRModel(),
+                    (float)GDiffManager.getTargetDiff(),
+                    nextDifficulty,
+                    win,
+                    answer);
 
-            double[] betas = GDiffManager.getBetas();
-            if (betas == null)
-                betas = new double[2];
-
-            this.log(GDiffManager.getPlayerId(),
-                betas[0],
-                betas[1],
-                GDiffManager.getModelQuality(),
-                GDiffManager.isUsingLRModel(),
-                (float)GDiffManager.getTargetDiff(),
-                nextDifficulty,
-                win);
-
-            double[] vars = new double[1];
-            vars[0] = nextDifficulty;
-            GDiffManager.addTry(vars, win);
-
-            numLevel++;
-
-            if (numLevel >= 62)
-                SceneManager.LoadScene(2);
+                double[] vars = new double[1];
+                vars[0] = nextDifficulty;
+                GDiffManager.addTry(vars, win);
             
-            vars = GDiffManager.getDiffParams(numLevel);
-            nextDifficulty = (float)vars[0];
-            StartCoroutine("nextLevel");
+                numLevel++;
+
+                if (numLevel >= 62)
+                    SceneManager.LoadScene(2);
+
+                vars = GDiffManager.getDiffParams(numLevel);
+                nextDifficulty = (float)vars[0];
+                StartCoroutine("nextLevel");
+            }
+                
 
         }
 
 
     }
 
-    public void log(string player, double beta0, double beta1, double accuracy, bool usedModel, float targetDiff, float param, bool win)
+    public void log(string player, double beta0, double beta1, double accuracy, bool usedModel, float targetDiff, float param, bool win, float answer)
     {
         string csvFile = Application.persistentDataPath + "/" + player + "_log.csv";
 
@@ -233,7 +254,7 @@ public class LevelManager : MonoBehaviour {
                 ofs = new FileStream(csvFile, FileMode.Create);
                 sw = new StreamWriter(ofs);
 
-                sw.Write("Time;beta0;beta1;accuracy;used Model;target Diff;param Diff;win\n");
+                sw.Write("Time;beta0;beta1;accuracy;used Model;target Diff;param Diff;win;answer\n");
 
                 sw.Flush();
                 ofs.Flush();
@@ -252,7 +273,8 @@ public class LevelManager : MonoBehaviour {
             sw.Write((usedModel?1:0) + ";");
             sw.Write(targetDiff + ";");
             sw.Write(param + ";");
-            sw.Write((win ? 1 : 0) + "\n");
+            sw.Write((win ? 1 : 0) + ";");
+            sw.Write(answer + "\n");
           
             sw.Flush();
             ofs.Flush();
@@ -262,6 +284,26 @@ public class LevelManager : MonoBehaviour {
         catch (System.Exception e)
         {
             Debug.LogError(e.Message);
+        }
+
+    }
+
+    public void ClickButton(Button B)
+    {
+        if (B.name == "BFacile")
+        {
+            answer = -1;
+            pressed = true;
+        }
+        else if (B.name == "BPareil")
+        {
+            answer = 0;
+            pressed = true;
+        }
+        else if(B.name == "BDur")
+        {
+            answer = 1;
+            pressed = true;
         }
 
     }

@@ -208,7 +208,9 @@ public class GameDifficultyManager : MonoBehaviour {
             double difficulty = 0;
             if(DifficultyCurves != null)
             {
-                difficulty = DifficultyCurves[DiffCurveChosen].getDifficulty(numLevel);
+                //difficulty = DifficultyCurves[DiffCurveChosen].getDifficulty(numLevel);
+                difficulty = Random.Range(0f, 1f);
+                debugString += "\nRandomDifficulty: " + difficulty;
             }
             
             /**
