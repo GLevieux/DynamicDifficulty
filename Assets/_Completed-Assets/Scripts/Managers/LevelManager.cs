@@ -14,6 +14,7 @@ public class LevelManager : MonoBehaviour {
     Transform[] ennemies;
     
     public GameDifficultyManager GDiffManager;
+    public DDAModelUnityBridge DDAModelManager;
 
     [System.Serializable]
     public struct paramsDiff
@@ -31,31 +32,60 @@ public class LevelManager : MonoBehaviour {
     public Text TScore;
     public Text TWin;
     public Text TFail;
+    public Text CompteARebours;
 
     private float nextDifficulty = 0;
     private bool waitingForNewLevel = true;
     private int numLevel = 0;
 
     private int Score = 0;
-    float answer;
-    bool pressed = false;
+    float answer = -10;
+    bool questionAnswered = false;
+    bool win = false;
+
+    bool explained = false;
+    bool firstLevel = true;
 
     GameObject question;
+    GameObject Explication;
+    GameObject Map;
 
+    public Transform AimCursor;
 
-    IEnumerator nextLevel()
+    IEnumerator explication()
     {
-        pressed = false;
+        TWin.enabled = false;
+        TFail.enabled = false;
+        Map.SetActive(false);
+        Explication.SetActive(true);
+        yield return new WaitForSeconds(10);
+        Explication.SetActive(false);
+        Map.SetActive(true);
+        explained = true;
+    }
+        IEnumerator nextLevel()
+    {
+        win = false;
+        CompteARebours.enabled = false;
+        questionAnswered = false;
         question.SetActive(false);
         waitingForNewLevel = true;
-        yield return new WaitForSeconds(2);
+        CompteARebours.enabled = true;
+        CompteARebours.text = "3";
+        yield return new WaitForSeconds(1);
+        CompteARebours.text = "2";
+        yield return new WaitForSeconds(1);
+        CompteARebours.text = "1";
+        yield return new WaitForSeconds(1);
+        CompteARebours.enabled = false;
+        TWin.enabled = false;
+        TFail.enabled = false;
         createLevel(nextDifficulty);
 
     }
-    
-    void createLevel(float difficulty)
+
+    void destroyLevel()
     {
-        
         if (player)
         { 
             Destroy(player.gameObject);
@@ -65,6 +95,12 @@ public class LevelManager : MonoBehaviour {
             }
         }
 
+    }
+    
+    void createLevel(float difficulty)
+    {
+        
+        
 
         paramsDiff currentDiff;
         currentDiff.nbEnnemies = Mathf.RoundToInt(Mathf.Lerp((float)easyDiff.nbEnnemies, (float)hardDiff.nbEnnemies, difficulty));
@@ -86,16 +122,14 @@ public class LevelManager : MonoBehaviour {
         waitingForNewLevel = false;
 
         updateScoreLabel();
-        TWin.enabled = false;
-        TFail.enabled = false;
     }
 
     void setupTank(Transform tank, float patateColor, int num)
     {
         MeshRenderer[] renderers = tank.GetComponentsInChildren<MeshRenderer>();
-
+        
         // Go through all the renderers...
-        Color color = Color.HSVToRGB(Random.value, patateColor, patateColor);
+        Color color = Color.HSVToRGB(patateColor, patateColor, patateColor);
         for (int i = 0; i < renderers.Length; i++)
         {
             // ... set their material color to the color specific to this tank.
@@ -121,14 +155,27 @@ public class LevelManager : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
+        Map = GameObject.Find("Map");
+        Explication = GameObject.Find("Explication");
+        Explication.SetActive(false);
         question = GameObject.Find("Question");
         question.SetActive(false);
         GDiffManager.setPlayerId("MonSuperJoueur");
+        //DDAModelManager.setPlayerId("MonSuperJoueur");
         GameObject pm = GameObject.Find("PlayerManager");
         if (pm)
+        {
             GDiffManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
-        GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
+            GDiffManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
+            GDiffManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);
+            /*DDAModelManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
+            DDAModelManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
+            DDAModelManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);*/
+        }
 
+        GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
+        //DDAModelManager.setChallengeId("Tank");
+        destroyLevel();
         createLevel(0.2f);
 
         Score = 0;
@@ -164,7 +211,7 @@ public class LevelManager : MonoBehaviour {
             b.onClick.AddListener(delegate { ClickButton(b); });
         bool end = false;
         bool alldead = false;
-        if (!player.gameObject.activeSelf)
+        if (player == null || !player.gameObject.activeSelf)
             end = true;
         else
         {
@@ -185,28 +232,24 @@ public class LevelManager : MonoBehaviour {
          * */
         if (end)
         {
-           
-                bool win = false;
-                if (alldead && player.gameObject.activeSelf)
-                {
-                    win = true;
-                }
-                if (win)
-                    TWin.enabled = true;
-                else
-                    TFail.enabled = true;
-
-            question.SetActive(true);
-            if (numLevel == 0) {
-                pressed = true;
-                question.SetActive(false);
+            
+            
+            if (alldead && player.gameObject.activeSelf)
+            {
+                win = true;
             }
-            if (pressed)
+            if (win)
+                TWin.enabled = true;
+            else
+                TFail.enabled = true;
+
+            destroyLevel();
+            if (DDAModelManager.Algorithm == DDAModel.DDAAlgorithm.DDA_PMDELTA)//!GDiffManager.isUsingLRModel())
             {
                 if (win)
                     Score++;
 
-                double[] betas = GDiffManager.getBetas();
+                double[] betas = GDiffManager.getBetas(); //DDAModelManager.DdaModel.LogReg.Betas;
                 if (betas == null)
                     betas = new double[2];
 
@@ -218,14 +261,26 @@ public class LevelManager : MonoBehaviour {
                     (float)GDiffManager.getTargetDiff(),
                     nextDifficulty,
                     win,
-                    answer);
+                    answer,
+                    GDiffManager.getPlayerAge(),
+                    GDiffManager.getPlayerGender());
+               /* this.log(DDAModelManager.getPlayerId(),
+                    betas[0],
+                    betas[1],
+                    DDAModelManager.DdaModel.LRAccuracy,
+                    GDiffManager.isUsingLRModel(),
+                    (float)GDiffManager.getTargetDiff(),
+                    nextDifficulty,
+                    win,
+                    answer,
+                    DDAModelManager.getPlayerAge(),
+                    DDAModelManager.getPlayerGender());*/
 
                 double[] vars = new double[1];
                 vars[0] = nextDifficulty;
                 GDiffManager.addTry(vars, win);
-            
-                numLevel++;
 
+                numLevel++;
                 if (numLevel >= 62)
                     SceneManager.LoadScene(2);
 
@@ -233,14 +288,100 @@ public class LevelManager : MonoBehaviour {
                 nextDifficulty = (float)vars[0];
                 StartCoroutine("nextLevel");
             }
-                
+            else
+            {
+                if (!explained)
+                {
+                    StartCoroutine("explication");
+                }
+                else
+                {
+                    if (!firstLevel)
+                    {
+                        Cursor.visible = true;
+                        AimCursor.gameObject.SetActive(false);
+                        question.SetActive(true);
+                        if (numLevel == 0)
+                        {
+                            questionAnswered = true;
+                            question.SetActive(false);
+                        }
+                        if (questionAnswered)
+                        {
+                            Cursor.visible = false;
+                            AimCursor.gameObject.SetActive(true);
+                            if (win)
+                                Score++;
 
+                            double[] betas = GDiffManager.getBetas();
+                            if (betas == null)
+                                betas = new double[2];
+
+                            this.log(GDiffManager.getPlayerId(),
+                                    betas[0],
+                                    betas[1],
+                                    GDiffManager.getModelQuality(),
+                                    GDiffManager.isUsingLRModel(),
+                                    (float)GDiffManager.getTargetDiff(),
+                                    nextDifficulty,
+                                    win,
+                                    answer,
+                                    GDiffManager.getPlayerAge(),
+                                    GDiffManager.getPlayerGender());
+
+                            double[] vars = new double[1];
+                            vars[0] = nextDifficulty;
+                            GDiffManager.addTry(vars, win);
+
+                            numLevel++;
+                            if (numLevel >= 62)
+                                SceneManager.LoadScene(2);
+
+                            vars = GDiffManager.getDiffParams(numLevel);
+                            nextDifficulty = (float)vars[0];
+                            StartCoroutine("nextLevel");
+                        }
+                    }
+                    else
+                    {
+                        firstLevel = false;
+                        if (win)
+                            Score++;
+
+                        double[] betas = GDiffManager.getBetas();
+                        if (betas == null)
+                            betas = new double[2];
+
+                        this.log(GDiffManager.getPlayerId(),
+                                betas[0],
+                                betas[1],
+                                GDiffManager.getModelQuality(),
+                                GDiffManager.isUsingLRModel(),
+                                (float)GDiffManager.getTargetDiff(),
+                                nextDifficulty,
+                                win,
+                                answer,
+                                GDiffManager.getPlayerAge(),
+                                GDiffManager.getPlayerGender());
+
+                        double[] vars = new double[1];
+                        vars[0] = nextDifficulty;
+                        GDiffManager.addTry(vars, win);
+
+                        numLevel++;
+                        if (numLevel >= 62)
+                            SceneManager.LoadScene(2);
+
+                        vars = GDiffManager.getDiffParams(numLevel);
+                        nextDifficulty = (float)vars[0];
+                        StartCoroutine("nextLevel");
+                    }
+                }
+            }
         }
-
-
     }
 
-    public void log(string player, double beta0, double beta1, double accuracy, bool usedModel, float targetDiff, float param, bool win, float answer)
+    public void log(string player, double beta0, double beta1, double accuracy, bool usedModel, float targetDiff, float param, bool win, float answer, string age, string sexe)
     {
         string csvFile = Application.persistentDataPath + "/" + player + "_log.csv";
 
@@ -254,7 +395,7 @@ public class LevelManager : MonoBehaviour {
                 ofs = new FileStream(csvFile, FileMode.Create);
                 sw = new StreamWriter(ofs);
 
-                sw.Write("Time;beta0;beta1;accuracy;used Model;target Diff;param Diff;win;answer\n");
+                sw.Write("Time;beta0;beta1;accuracy;used Model;target Diff;param Diff;win;answer;age;sexe\n");
 
                 sw.Flush();
                 ofs.Flush();
@@ -274,8 +415,10 @@ public class LevelManager : MonoBehaviour {
             sw.Write(targetDiff + ";");
             sw.Write(param + ";");
             sw.Write((win ? 1 : 0) + ";");
-            sw.Write(answer + "\n");
-          
+            sw.Write(answer + ";");
+            sw.Write(age + ";");
+            sw.Write(sexe + "\n");
+
             sw.Flush();
             ofs.Flush();
             sw.Close();
@@ -293,17 +436,17 @@ public class LevelManager : MonoBehaviour {
         if (B.name == "BFacile")
         {
             answer = -1;
-            pressed = true;
+            questionAnswered = true;
         }
         else if (B.name == "BPareil")
         {
             answer = 0;
-            pressed = true;
+            questionAnswered = true;
         }
-        else if(B.name == "BDur")
+        else if (B.name == "BDur")
         {
             answer = 1;
-            pressed = true;
+            questionAnswered = true;
         }
 
     }

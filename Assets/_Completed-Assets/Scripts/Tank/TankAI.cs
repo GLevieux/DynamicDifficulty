@@ -12,6 +12,7 @@ public class TankAI : MonoBehaviour {
     public float speedTurn = 1.0f;
     public float speedMove = 0.5f;
     public float precision = 0.5f;
+    private float cooldownFirstShot = 1;
     private float cooldownShot = 0;
     private float coolDownVariabilityDir = 0;
     private Vector3 dirVariability;
@@ -30,7 +31,8 @@ public class TankAI : MonoBehaviour {
 	
 	// Update is called once per frame
 	void LateUpdate () {
-
+        if(cooldownFirstShot > 0)
+            cooldownFirstShot -= Time.deltaTime;
         coolDownVariabilityDir -= Time.deltaTime;
         if(coolDownVariabilityDir <= 0)
         {
@@ -96,7 +98,7 @@ public class TankAI : MonoBehaviour {
             }
         }
 
-        if (Mathf.Abs(angle) < 5 && cooldownShot <= 0 && !tooClose)
+        if (Mathf.Abs(angle) < 5 && cooldownShot <= 0 && !tooClose && cooldownFirstShot <= 0)
         {
             //On vise le poinit ou va se trouver le joueur
             distance = (transform.GetComponent<Complete.TankShooting>().m_FireTransform.position - nextPos).magnitude;

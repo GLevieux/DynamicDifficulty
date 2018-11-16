@@ -99,6 +99,8 @@ public class GameDifficultyManager : MonoBehaviour {
     GameDifficultyModel Model;
     GDActivity Activity;
     private string PlayerId = "UnknownPlayer";
+    private string PlayerAge = "UnknownAge";
+    private string PlayerGender = "UnknownGender";
 
     private void setDiffCurve(int diffCurve)
     {
@@ -116,6 +118,26 @@ public class GameDifficultyManager : MonoBehaviour {
     public string getPlayerId()
     {
         return PlayerId;
+    }
+
+    public void setPlayerAge(string playerAge)
+    {
+        PlayerAge = playerAge;
+    }
+
+    public string getPlayerAge()
+    {
+        return PlayerAge;
+    }
+
+    public void setPlayerGender(string playerGender)
+    {
+        PlayerGender = playerGender;
+    }
+
+    public string getPlayerGender()
+    {
+        return PlayerGender;
     }
 
     /**

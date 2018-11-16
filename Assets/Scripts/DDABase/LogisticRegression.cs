@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.IO.IsolatedStorage;
 
-class LogisticRegression
+public class LogisticRegression
 {
     public class DataLR
     {
@@ -162,7 +162,6 @@ class LogisticRegression
             return part;
         }
         
-
         public void LoadDataFromList(List<double[]> indepVars, List<double> depVars)
         {
             if(indepVars == null || indepVars.Count == 0)
@@ -333,6 +332,7 @@ class LogisticRegression
         }
 
         //Attention : PROBA DE SUCCES, pas difficulté
+        //Donner la valeur des variables en entrée (les theta)
         public double Predict(double[] values)
         {
             // p = 1 / (1 + exp(-z) where z = b0x0 + b1x1 + b2x2 + b3x3 + . . .
