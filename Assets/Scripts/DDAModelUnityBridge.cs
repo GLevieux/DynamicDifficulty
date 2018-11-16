@@ -11,7 +11,7 @@ public class DDAModelUnityBridge : MonoBehaviour {
     public string ChallengeId = "UnknownChallenge";
     public float ThetaStart = 0.2f;
     public bool DoNotUpdateAccuracy = false;
-    public DDAModel.DDAAlgorithm Algorithm;
+    DDAModel.DDAAlgorithm Algorithm;
     
     public void setPlayerId(string playerId)
     {
@@ -62,6 +62,11 @@ public class DDAModelUnityBridge : MonoBehaviour {
         DdaModel.setDdaAlgorithm(algorithm);
     }
 
+    public DDAModel.DDAAlgorithm getDDAAlgorithm()
+    {
+        return DdaModel.getDdaAlgorithm();
+    }
+
     public void initPMAlgorithm(double lastTheta, bool wonLastTime = false)
     {
         DdaModel.setPMInit(lastTheta, wonLastTime);
@@ -78,7 +83,7 @@ public class DDAModelUnityBridge : MonoBehaviour {
         DdaModel.addLastAttempt(attempt);
     }
 
-    public DDAModel.DiffParams computeNewDiffParams(double targetDifficulty, bool doNotUpdateLRAccuracy = false)
+    public DDAModel.DiffParams computeNewDiffParams(double targetDifficulty = 0, bool doNotUpdateLRAccuracy = false)
     {
         DdaModel.setDdaAlgorithm(Algorithm);
         return DdaModel.computeNewDiffParams(targetDifficulty, doNotUpdateLRAccuracy || DoNotUpdateAccuracy);

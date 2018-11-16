@@ -69,6 +69,12 @@ public class DDAModel {
         Algorithm = algorithm;
     }
 
+    public DDAAlgorithm getDdaAlgorithm()
+    {
+        return Algorithm;
+    }
+
+
     /**
      * Permet de déterminer un point de départ. L'algo pmdelta
      * va partir de la pour augmenter ou diminuer la difficulté
@@ -95,7 +101,7 @@ public class DDAModel {
      * Get gameplay parameter value for desired target difficulty
      * uses PMDeltaLastTheta for PMDelta algorithm
      */
-    public DiffParams computeNewDiffParams(double targetDifficulty, bool doNotUpdateLRAccuracy = false)
+    public DiffParams computeNewDiffParams(double targetDifficulty = 0, bool doNotUpdateLRAccuracy = false)
     {
         DiffParams diffParams = new DiffParams();
         diffParams.LogRegReady = true;

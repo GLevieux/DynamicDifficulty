@@ -45,6 +45,10 @@ public class LevelManager : MonoBehaviour {
 
     bool explained = false;
     bool firstLevel = true;
+    bool logged = false;
+
+    int TutorialLevel = 0;
+    int MaxLevel = 9;
 
     GameObject question;
     GameObject Explication;
@@ -65,6 +69,7 @@ public class LevelManager : MonoBehaviour {
     }
         IEnumerator nextLevel()
     {
+        logged = false;
         win = false;
         CompteARebours.enabled = false;
         questionAnswered = false;
@@ -160,21 +165,21 @@ public class LevelManager : MonoBehaviour {
         Explication.SetActive(false);
         question = GameObject.Find("Question");
         question.SetActive(false);
-        GDiffManager.setPlayerId("MonSuperJoueur");
-        //DDAModelManager.setPlayerId("MonSuperJoueur");
+        //GDiffManager.setPlayerId("MonSuperJoueur");
+        DDAModelManager.setPlayerId("MonSuperJoueur");
         GameObject pm = GameObject.Find("PlayerManager");
         if (pm)
         {
-            GDiffManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
+            /*GDiffManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
             GDiffManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
-            GDiffManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);
-            /*DDAModelManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
+            GDiffManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);*/
+            DDAModelManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
             DDAModelManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
-            DDAModelManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);*/
+            DDAModelManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);
         }
 
-        GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
-        //DDAModelManager.setChallengeId("Tank");
+        //GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
+        DDAModelManager.setChallengeId("Tank");
         destroyLevel();
         createLevel(0.2f);
 
@@ -226,14 +231,18 @@ public class LevelManager : MonoBehaviour {
             if (alldead)
                 end = true;
         }
+        if (TutorialLevel < MaxLevel)
+            DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
+        else
+            DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_RANDOM);
+
 
         /**
          * Fin de niveau !!! on log tout ici
          * */
         if (end)
         {
-            
-            
+            Debug.Log(DDAModelManager.getDDAAlgorithm());
             if (alldead && player.gameObject.activeSelf)
             {
                 win = true;
@@ -244,51 +253,68 @@ public class LevelManager : MonoBehaviour {
                 TFail.enabled = true;
 
             destroyLevel();
-            if (DDAModelManager.Algorithm == DDAModel.DDAAlgorithm.DDA_PMDELTA)//!GDiffManager.isUsingLRModel())
+
+            if (win)
+                Score++;
+            double[] betas = new double[2];
+            /*Debug.Log(DDAModelManager.DdaModel);
+            if (DDAModelManager.DdaModel.LogReg.Betas != null)
             {
-                if (win)
-                    Score++;
+                betas = DDAModelManager.DdaModel.LogReg.Betas;//GDiffManager.getBetas();
+            }*/
 
-                double[] betas = GDiffManager.getBetas(); //DDAModelManager.DdaModel.LogReg.Betas;
-                if (betas == null)
-                    betas = new double[2];
-
-                this.log(GDiffManager.getPlayerId(),
-                    betas[0],
-                    betas[1],
-                    GDiffManager.getModelQuality(),
-                    GDiffManager.isUsingLRModel(),
-                    (float)GDiffManager.getTargetDiff(),
-                    nextDifficulty,
-                    win,
-                    answer,
-                    GDiffManager.getPlayerAge(),
-                    GDiffManager.getPlayerGender());
-               /* this.log(DDAModelManager.getPlayerId(),
+            /*this.log(GDiffManager.getPlayerId(),
+                betas[0],
+                betas[1],
+                GDiffManager.getModelQuality(),
+                GDiffManager.isUsingLRModel(),
+                (float)GDiffManager.getTargetDiff(),
+                nextDifficulty,
+                win,
+                answer,
+                GDiffManager.getPlayerAge(),
+                GDiffManager.getPlayerGender());*/
+            if (!logged)
+            {
+                this.log(DDAModelManager.getPlayerId(),
                     betas[0],
                     betas[1],
                     DDAModelManager.DdaModel.LRAccuracy,
-                    GDiffManager.isUsingLRModel(),
-                    (float)GDiffManager.getTargetDiff(),
+                    DDAModelManager.getDDAAlgorithm().ToString(),
+                    (float)DDAModelManager.computeNewDiffParams().TargetDiff,
                     nextDifficulty,
                     win,
                     answer,
                     DDAModelManager.getPlayerAge(),
-                    DDAModelManager.getPlayerGender());*/
+                    DDAModelManager.getPlayerGender());
+                logged = true;
+            }
 
-                double[] vars = new double[1];
-                vars[0] = nextDifficulty;
-                GDiffManager.addTry(vars, win);
 
+            double[] vars = new double[1];
+            vars[0] = nextDifficulty;
+            DDADataManager.Attempt lastAttempt = new DDADataManager.Attempt();
+            if (win)
+                lastAttempt.Result = 1;
+            else
+                lastAttempt.Result = 0;
+            lastAttempt.Thetas = vars;
+            //GDiffManager.addTry(vars, win);
+            DDAModelManager.addLastAttempt(lastAttempt);
+
+
+            if (numLevel >= 62)
+                SceneManager.LoadScene(2);
+
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA)//!GDiffManager.isUsingLRModel())
+            {
+                //vars = GDiffManager.getDiffParams(numLevel);
+                TutorialLevel++;
+                nextDifficulty = (float)DDAModelManager.computeNewDiffParams().Theta;
                 numLevel++;
-                if (numLevel >= 62)
-                    SceneManager.LoadScene(2);
-
-                vars = GDiffManager.getDiffParams(numLevel);
-                nextDifficulty = (float)vars[0];
                 StartCoroutine("nextLevel");
             }
-            else
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_RANDOM)
             {
                 if (!explained)
                 {
@@ -313,67 +339,18 @@ public class LevelManager : MonoBehaviour {
                             if (win)
                                 Score++;
 
-                            double[] betas = GDiffManager.getBetas();
-                            if (betas == null)
-                                betas = new double[2];
 
-                            this.log(GDiffManager.getPlayerId(),
-                                    betas[0],
-                                    betas[1],
-                                    GDiffManager.getModelQuality(),
-                                    GDiffManager.isUsingLRModel(),
-                                    (float)GDiffManager.getTargetDiff(),
-                                    nextDifficulty,
-                                    win,
-                                    answer,
-                                    GDiffManager.getPlayerAge(),
-                                    GDiffManager.getPlayerGender());
-
-                            double[] vars = new double[1];
-                            vars[0] = nextDifficulty;
-                            GDiffManager.addTry(vars, win);
-
+                            //vars = GDiffManager.getDiffParams(numLevel);
+                            nextDifficulty = (float)DDAModelManager.computeNewDiffParams().Theta;
                             numLevel++;
-                            if (numLevel >= 62)
-                                SceneManager.LoadScene(2);
-
-                            vars = GDiffManager.getDiffParams(numLevel);
-                            nextDifficulty = (float)vars[0];
                             StartCoroutine("nextLevel");
                         }
                     }
                     else
                     {
-                        firstLevel = false;
-                        if (win)
-                            Score++;
-
-                        double[] betas = GDiffManager.getBetas();
-                        if (betas == null)
-                            betas = new double[2];
-
-                        this.log(GDiffManager.getPlayerId(),
-                                betas[0],
-                                betas[1],
-                                GDiffManager.getModelQuality(),
-                                GDiffManager.isUsingLRModel(),
-                                (float)GDiffManager.getTargetDiff(),
-                                nextDifficulty,
-                                win,
-                                answer,
-                                GDiffManager.getPlayerAge(),
-                                GDiffManager.getPlayerGender());
-
-                        double[] vars = new double[1];
-                        vars[0] = nextDifficulty;
-                        GDiffManager.addTry(vars, win);
-
+                        //vars = GDiffManager.getDiffParams(numLevel);
+                        nextDifficulty = (float)DDAModelManager.computeNewDiffParams().Theta;
                         numLevel++;
-                        if (numLevel >= 62)
-                            SceneManager.LoadScene(2);
-
-                        vars = GDiffManager.getDiffParams(numLevel);
-                        nextDifficulty = (float)vars[0];
                         StartCoroutine("nextLevel");
                     }
                 }
@@ -381,7 +358,7 @@ public class LevelManager : MonoBehaviour {
         }
     }
 
-    public void log(string player, double beta0, double beta1, double accuracy, bool usedModel, float targetDiff, float param, bool win, float answer, string age, string sexe)
+    public void log(string player, double beta0, double beta1, double accuracy, string usedAlgorithm, float targetDiff, float param, bool win, float answer, string age, string sexe)
     {
         string csvFile = Application.persistentDataPath + "/" + player + "_log.csv";
 
@@ -411,7 +388,7 @@ public class LevelManager : MonoBehaviour {
             sw.Write(beta0 + ";");
             sw.Write(beta1 + ";");
             sw.Write(accuracy + ";");
-            sw.Write((usedModel?1:0) + ";");
+            sw.Write(usedAlgorithm + ";");
             sw.Write(targetDiff + ";");
             sw.Write(param + ";");
             sw.Write((win ? 1 : 0) + ";");
