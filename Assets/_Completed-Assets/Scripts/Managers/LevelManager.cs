@@ -13,7 +13,6 @@ public class LevelManager : MonoBehaviour {
     Transform player;
     Transform[] ennemies;
     
-    public GameDifficultyManager GDiffManager;
     public DDAModelUnityBridge DDAModelManager;
 
     [System.Serializable]
@@ -34,6 +33,7 @@ public class LevelManager : MonoBehaviour {
     public Text TFail;
     public Text CompteARebours;
 
+    private DDAModel.DiffParams lastDiffParams;
     private float nextDifficulty = 0;
     private bool waitingForNewLevel = true;
     private int numLevel = 0;
@@ -44,11 +44,12 @@ public class LevelManager : MonoBehaviour {
     bool win = false;
 
     bool explained = false;
+    bool explaining = false;
     bool firstLevel = true;
     bool logged = false;
 
     int TutorialLevel = 0;
-    int MaxLevel = 9;
+    int MaxLevel = 15;
 
     GameObject question;
     GameObject Explication;
@@ -58,13 +59,14 @@ public class LevelManager : MonoBehaviour {
 
     IEnumerator explication()
     {
+        explaining = true;
         TWin.enabled = false;
         TFail.enabled = false;
         Map.SetActive(false);
+        Cursor.visible = true;
+        AimCursor.gameObject.SetActive(false);
         Explication.SetActive(true);
-        yield return new WaitForSeconds(10);
-        Explication.SetActive(false);
-        Map.SetActive(true);
+        yield return new WaitForSeconds(2);
         explained = true;
     }
         IEnumerator nextLevel()
@@ -165,23 +167,29 @@ public class LevelManager : MonoBehaviour {
         Explication.SetActive(false);
         question = GameObject.Find("Question");
         question.SetActive(false);
-        //GDiffManager.setPlayerId("MonSuperJoueur");
+
+        DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
         DDAModelManager.setPlayerId("MonSuperJoueur");
         GameObject pm = GameObject.Find("PlayerManager");
         if (pm)
         {
-            /*GDiffManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
-            GDiffManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
-            GDiffManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);*/
             DDAModelManager.setPlayerId(pm.GetComponent<PlayerManager>().PlayerName);
             DDAModelManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
             DDAModelManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);
         }
-
-        //GDiffManager.setActivity(GameDifficultyManager.GDActivityEnum.TANK);
+        
         DDAModelManager.setChallengeId("Tank");
         destroyLevel();
-        createLevel(0.2f);
+
+        //Premier niveau
+        lastDiffParams = DDAModelManager.computeNewDiffParams();
+        nextDifficulty = (float)lastDiffParams.Theta;
+        createLevel(nextDifficulty);
+
+        foreach (Button b in question.GetComponentsInChildren<Button>())
+            b.onClick.AddListener(delegate { ClickButton(b); });
+        Button BValider = Explication.GetComponentInChildren<Button>();
+        BValider.onClick.AddListener(delegate { ClickButton(BValider); });
 
         Score = 0;
     }
@@ -212,8 +220,7 @@ public class LevelManager : MonoBehaviour {
     void Update() {
         if (waitingForNewLevel)
             return;
-        foreach (Button b in question.GetComponentsInChildren<Button>())
-            b.onClick.AddListener(delegate { ClickButton(b); });
+        
         bool end = false;
         bool alldead = false;
         if (player == null || !player.gameObject.activeSelf)
@@ -231,10 +238,8 @@ public class LevelManager : MonoBehaviour {
             if (alldead)
                 end = true;
         }
-        if (TutorialLevel < MaxLevel)
-            DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
-        else
-            DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_RANDOM);
+
+        
 
 
         /**
@@ -242,7 +247,6 @@ public class LevelManager : MonoBehaviour {
          * */
         if (end)
         {
-            Debug.Log(DDAModelManager.getDDAAlgorithm());
             if (alldead && player.gameObject.activeSelf)
             {
                 win = true;
@@ -254,111 +258,94 @@ public class LevelManager : MonoBehaviour {
 
             destroyLevel();
 
-            if (win)
-                Score++;
-            double[] betas = new double[2];
-            /*Debug.Log(DDAModelManager.DdaModel);
-            if (DDAModelManager.DdaModel.LogReg.Betas != null)
-            {
-                betas = DDAModelManager.DdaModel.LogReg.Betas;//GDiffManager.getBetas();
-            }*/
-
-            /*this.log(GDiffManager.getPlayerId(),
-                betas[0],
-                betas[1],
-                GDiffManager.getModelQuality(),
-                GDiffManager.isUsingLRModel(),
-                (float)GDiffManager.getTargetDiff(),
-                nextDifficulty,
-                win,
-                answer,
-                GDiffManager.getPlayerAge(),
-                GDiffManager.getPlayerGender());*/
+            
+            
             if (!logged)
             {
+                if (TutorialLevel >= MaxLevel - 1 && !explained)
+                    StartCoroutine("explication");
+                if (TutorialLevel >= MaxLevel)
+                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_RANDOM);
+                else
+                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
+
+                if (win)
+                    Score++;
+                double[] betas = new double[2];
+                if (lastDiffParams.Betas != null && lastDiffParams.Betas.Length > 0)
+                {
+                    betas = lastDiffParams.Betas;
+                }
                 this.log(DDAModelManager.getPlayerId(),
                     betas[0],
                     betas[1],
-                    DDAModelManager.DdaModel.LRAccuracy,
-                    DDAModelManager.getDDAAlgorithm().ToString(),
-                    (float)DDAModelManager.computeNewDiffParams().TargetDiff,
-                    nextDifficulty,
+                    lastDiffParams.LRAccuracy,
+                    lastDiffParams.LogRegError.ToString(),
+                    lastDiffParams.AlgorithmActuallyUsed.ToString(),
+                    (float)lastDiffParams.TargetDiff,
+                    (float)lastDiffParams.Theta,
                     win,
                     answer,
                     DDAModelManager.getPlayerAge(),
                     DDAModelManager.getPlayerGender());
                 logged = true;
+
+
+
+                double[] vars = new double[1];
+                vars[0] = nextDifficulty;
+                DDADataManager.Attempt lastAttempt = new DDADataManager.Attempt();
+                if (win)
+                    lastAttempt.Result = 1;
+                else
+                    lastAttempt.Result = 0;
+                lastAttempt.Thetas = vars;
+                DDAModelManager.addLastAttempt(lastAttempt);
+
             }
-
-
-            double[] vars = new double[1];
-            vars[0] = nextDifficulty;
-            DDADataManager.Attempt lastAttempt = new DDADataManager.Attempt();
-            if (win)
-                lastAttempt.Result = 1;
-            else
-                lastAttempt.Result = 0;
-            lastAttempt.Thetas = vars;
-            //GDiffManager.addTry(vars, win);
-            DDAModelManager.addLastAttempt(lastAttempt);
-
-
             if (numLevel >= 62)
                 SceneManager.LoadScene(2);
 
-            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA)//!GDiffManager.isUsingLRModel())
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA && !explaining)//!GDiffManager.isUsingLRModel())
             {
-                //vars = GDiffManager.getDiffParams(numLevel);
                 TutorialLevel++;
-                nextDifficulty = (float)DDAModelManager.computeNewDiffParams().Theta;
+                lastDiffParams = DDAModelManager.computeNewDiffParams();
+                nextDifficulty = (float)lastDiffParams.Theta;
                 numLevel++;
                 StartCoroutine("nextLevel");
             }
-            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_RANDOM)
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_RANDOM && !explaining)
             {
-                if (!explained)
+                if (!firstLevel)
                 {
-                    StartCoroutine("explication");
-                }
-                else
-                {
-                    if (!firstLevel)
+                    Cursor.visible = true;
+                    AimCursor.gameObject.SetActive(false);
+                    question.SetActive(true);
+                    if (questionAnswered)
                     {
-                        Cursor.visible = true;
-                        AimCursor.gameObject.SetActive(false);
-                        question.SetActive(true);
-                        if (numLevel == 0)
-                        {
-                            questionAnswered = true;
-                            question.SetActive(false);
-                        }
-                        if (questionAnswered)
-                        {
-                            Cursor.visible = false;
-                            AimCursor.gameObject.SetActive(true);
-                            if (win)
-                                Score++;
+                        Cursor.visible = false;
+                        AimCursor.gameObject.SetActive(true);
 
-
-                            //vars = GDiffManager.getDiffParams(numLevel);
-                            nextDifficulty = (float)DDAModelManager.computeNewDiffParams().Theta;
-                            numLevel++;
-                            StartCoroutine("nextLevel");
-                        }
-                    }
-                    else
-                    {
-                        //vars = GDiffManager.getDiffParams(numLevel);
-                        nextDifficulty = (float)DDAModelManager.computeNewDiffParams().Theta;
+                            
+                        lastDiffParams = DDAModelManager.computeNewDiffParams();
+                        nextDifficulty = (float)lastDiffParams.Theta;
                         numLevel++;
                         StartCoroutine("nextLevel");
                     }
+                }
+                else
+                {
+                    firstLevel = false;
+                    lastDiffParams = DDAModelManager.computeNewDiffParams();
+                    nextDifficulty = (float)lastDiffParams.Theta;
+                    numLevel++;
+                    StartCoroutine("nextLevel");
                 }
             }
         }
     }
 
-    public void log(string player, double beta0, double beta1, double accuracy, string usedAlgorithm, float targetDiff, float param, bool win, float answer, string age, string sexe)
+    public void log(string player, double beta0, double beta1, double accuracy, string logRegError, string usedAlgorithm, float targetDiff, float param, bool win, float answer, string age, string sexe)
     {
         string csvFile = Application.persistentDataPath + "/" + player + "_log.csv";
 
@@ -372,7 +359,7 @@ public class LevelManager : MonoBehaviour {
                 ofs = new FileStream(csvFile, FileMode.Create);
                 sw = new StreamWriter(ofs);
 
-                sw.Write("Time;beta0;beta1;accuracy;used Model;target Diff;param Diff;win;answer;age;sexe\n");
+                sw.Write("Time;beta0;beta1;accuracy;log reg error;used Model;target Diff;param Diff;win;answer;age;sexe\n");
 
                 sw.Flush();
                 ofs.Flush();
@@ -388,6 +375,7 @@ public class LevelManager : MonoBehaviour {
             sw.Write(beta0 + ";");
             sw.Write(beta1 + ";");
             sw.Write(accuracy + ";");
+            sw.Write(logRegError + ";");
             sw.Write(usedAlgorithm + ";");
             sw.Write(targetDiff + ";");
             sw.Write(param + ";");
@@ -424,6 +412,14 @@ public class LevelManager : MonoBehaviour {
         {
             answer = 1;
             questionAnswered = true;
+        }
+        else if (B.name == "BValider")
+        {
+            Explication.SetActive(false);
+            Map.SetActive(true);
+            explaining = false;
+            Cursor.visible = false;
+            AimCursor.gameObject.SetActive(true);
         }
 
     }

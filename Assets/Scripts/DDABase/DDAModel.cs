@@ -35,7 +35,21 @@ public class DDAModel {
     };
 
     DDAAlgorithm Algorithm = DDAAlgorithm.DDA_LOGREG;
-    
+
+    public enum DDALogRegError
+    {
+        OK, //Pas d'erreur
+        NOT_ENOUGH_SAMPLES,
+        NOT_ENOUGH_WIN,
+        NOT_ENOUGH_FAIL, 
+        NEWTON_RAPHSON_ERROR, //Le newton raphson nous retourne pas de betas
+        INV_PRED_ERROR_TOO_HIGH, //Arrive pas a faire sa prédiction dans les deux sens (pas meme valeurs)
+        INV_PRED_ERROR_NAN, //Arrive pas a faire sa prédiction dans les deux sens (pas meme valeurs)
+        SD_PREDICTIONS_TOO_LOW, //On predit la meme proba pour tous les thetas
+        SD_PREDICTIONS_NAN, //Nan sur la sd des probas        
+        ACCURACY_TOO_LOW
+    };
+
     public struct DiffParams
     {
         public double TargetDiff;
@@ -47,6 +61,7 @@ public class DDAModel {
         public DDAAlgorithm AlgorithmActuallyUsed;
         public DDAAlgorithm AlgorithmWanted;
         public double[] Betas;
+        public DDALogRegError LogRegError;
     }
 
     /**
@@ -106,7 +121,8 @@ public class DDAModel {
         DiffParams diffParams = new DiffParams();
         diffParams.LogRegReady = true;
         diffParams.AlgorithmWanted = Algorithm;
-        diffParams.Betas = null; 
+        diffParams.Betas = null;
+        diffParams.LogRegError = DDALogRegError.OK;
 
         //Loading data
         List<DDADataManager.Attempt> attempts = DataManager.getAttempts(PlayerId, ChallengeId, LRNbLastAttemptsToConsider);
@@ -136,6 +152,7 @@ public class DDAModel {
         {
             Debug.Log("Less than 10 attempts, can not use LogReg prediciton");
             diffParams.LogRegReady = false;
+            diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_SAMPLES;
         }
         else
         {
@@ -155,6 +172,12 @@ public class DDAModel {
             {
                 Debug.Log("Less than 4 wins or 4 fails, will not use LogReg");
                 diffParams.LogRegReady = false;
+
+                if (nbWin <= 3)
+                    diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_WIN;
+                if (nbFail <= 3)
+                    diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_FAIL;
+
             }
         }
 
@@ -192,7 +215,10 @@ public class DDAModel {
                 diffParams.NbAttemptsUsedToCompute = data.DepVar.Length;
 
                 if (!LogReg.isUsable())
+                {
                     LRAccuracy = 0;
+                    diffParams.LogRegError = DDALogRegError.NEWTON_RAPHSON_ERROR;
+                }                    
                 else
                 {
                     //Verifying if LogReg is ok : must be able to work in both ways 
@@ -216,6 +242,10 @@ public class DDAModel {
                     {
                         Debug.Log("Model is not solid, error = " + errorSum);
                         LRAccuracy = 0;
+                        if (errorSum > 1)
+                            diffParams.LogRegError = DDALogRegError.INV_PRED_ERROR_TOO_HIGH;
+                        if(double.IsNaN(errorSum))
+                            diffParams.LogRegError = DDALogRegError.INV_PRED_ERROR_NAN;
                     }
 
                     //Verifying if LogReg is ok : sd of diff predictions in all theta range must not be 0
@@ -234,6 +264,10 @@ public class DDAModel {
                     {
                         Debug.Log("Model parameter estimation is always the same : sd=" + sd);
                         LRAccuracy = 0;
+                        if (sd < 0.05)
+                            diffParams.LogRegError = DDALogRegError.SD_PREDICTIONS_TOO_LOW;
+                        if (double.IsNaN(sd))
+                            diffParams.LogRegError = DDALogRegError.SD_PREDICTIONS_NAN;
                     }
                 }
             }
@@ -248,6 +282,7 @@ public class DDAModel {
             {
                 Debug.Log("LogReg accuracy is under "+ LRMinimalAccuracy + ", not using LogReg");
                 diffParams.LogRegReady = false;
+                diffParams.LogRegError = DDALogRegError.ACCURACY_TOO_LOW;
             }
         }
 

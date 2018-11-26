@@ -59,6 +59,7 @@ public class DDAModelUnityBridge : MonoBehaviour {
 
     public void setDDAAlgorithm(DDAModel.DDAAlgorithm algorithm)
     {
+        Algorithm = algorithm;
         DdaModel.setDdaAlgorithm(algorithm);
     }
 
