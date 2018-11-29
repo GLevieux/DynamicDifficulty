@@ -2,17 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DDAModel {
+public class DDAModel
+{
 
     //Settings Data
     public string PlayerId;
-    public string PlayerAge;
-    public string PlayerGender;
-    public string ChallengeId;   
+    public string ChallengeId;
     DDADataManager DataManager;
-    
+
     //Log reg model
-    public LogisticRegression.ModelLR LogReg;
+    LogisticRegression.ModelLR LogReg;
     const double LRMinimalAccuracy = 0.6;
     public double LRAccuracy = 0;
     float LRExplo = 0.05f;
@@ -31,23 +30,24 @@ public class DDAModel {
     {
         DDA_LOGREG, //Utilise la regression logistique (si modèle calibré, sinon PM_DELTA)
         DDA_PMDELTA, //Si on gagne, theta monte, si on perds, theta descend
-        DDA_RANDOM //Choisit un theta random
+        DDA_RANDOM_THETA, //Choisit un theta random
+        DDA_RANDOM_LOGREG //Choisit une diff random et en déduit le theta avec la logreg (sinon on fait random theta)
     };
 
     DDAAlgorithm Algorithm = DDAAlgorithm.DDA_LOGREG;
 
     public enum DDALogRegError
     {
-        OK, //Pas d'erreur
+        OK,
         NOT_ENOUGH_SAMPLES,
-        NOT_ENOUGH_WIN,
-        NOT_ENOUGH_FAIL, 
-        NEWTON_RAPHSON_ERROR, //Le newton raphson nous retourne pas de betas
-        INV_PRED_ERROR_TOO_HIGH, //Arrive pas a faire sa prédiction dans les deux sens (pas meme valeurs)
-        INV_PRED_ERROR_NAN, //Arrive pas a faire sa prédiction dans les deux sens (pas meme valeurs)
-        SD_PREDICTIONS_TOO_LOW, //On predit la meme proba pour tous les thetas
-        SD_PREDICTIONS_NAN, //Nan sur la sd des probas        
-        ACCURACY_TOO_LOW
+        NOT_ENOUGH_WINS,
+        NOT_ENOUGH_FAILS,
+        NEWTON_RAPHSON_ERROR,
+        ACCURACY_TOO_LOW,
+        SUM_ERROR_TOO_HIGH,
+        SD_PRED_TOO_LOW,
+        SUM_ERROR_IS_NAN,
+        SD_PRED_IS_NAN
     };
 
     public struct DiffParams
@@ -55,24 +55,22 @@ public class DDAModel {
         public double TargetDiff;
         public double TargetDiffWithExplo;
         public bool LogRegReady;
+        public DDALogRegError LogRegError;
         public double LRAccuracy;
         public double Theta;
         public int NbAttemptsUsedToCompute;
         public DDAAlgorithm AlgorithmActuallyUsed;
         public DDAAlgorithm AlgorithmWanted;
         public double[] Betas;
-        public DDALogRegError LogRegError;
     }
 
     /**
      * One can only create a model for a specific challenge and player, and with a chosen data mgmt strategy
      */
-    public DDAModel(DDADataManager dataManager, string playerId, string playerAge, string playerGender, string challengeId)
+    public DDAModel(DDADataManager dataManager, string playerId, string challengeId)
     {
         DataManager = dataManager;
         PlayerId = playerId;
-        PlayerAge = playerAge;
-        PlayerGender = playerGender;
         ChallengeId = challengeId;
     }
 
@@ -83,12 +81,6 @@ public class DDAModel {
     {
         Algorithm = algorithm;
     }
-
-    public DDAAlgorithm getDdaAlgorithm()
-    {
-        return Algorithm;
-    }
-
 
     /**
      * Permet de déterminer un point de départ. L'algo pmdelta
@@ -116,7 +108,7 @@ public class DDAModel {
      * Get gameplay parameter value for desired target difficulty
      * uses PMDeltaLastTheta for PMDelta algorithm
      */
-    public DiffParams computeNewDiffParams(double targetDifficulty = 0, bool doNotUpdateLRAccuracy = false)
+    public DiffParams computeNewDiffParams(double targetDifficulty, bool doNotUpdateLRAccuracy = false)
     {
         DiffParams diffParams = new DiffParams();
         diffParams.LogRegReady = true;
@@ -131,7 +123,7 @@ public class DDAModel {
         LogisticRegression.DataLR data = new LogisticRegression.DataLR();
         List<double[]> indepVars = new List<double[]>();
         List<double> depVars = new List<double>();
-        foreach(DDADataManager.Attempt attempt in attempts)
+        foreach (DDADataManager.Attempt attempt in attempts)
         {
             indepVars.Add(attempt.Thetas);
             depVars.Add(attempt.Result);
@@ -139,13 +131,12 @@ public class DDAModel {
         data.LoadDataFromList(indepVars, depVars);
 
         //On met a jour le dernier theta en fonction des datas si on ne l'a pas deja set
-        if(indepVars.Count > 0 && !PMInitialized)
+        if (indepVars.Count > 0 && !PMInitialized)
         {
             PMLastTheta = indepVars[indepVars.Count - 1][0];
             PMWonLastTime = depVars[depVars.Count - 1] > 0 ? true : false;
             PMInitialized = true;
         }
-            
 
         //Check if enough data to update LogReg
         if (attempts.Count < 10)
@@ -174,10 +165,9 @@ public class DDAModel {
                 diffParams.LogRegReady = false;
 
                 if (nbWin <= 3)
-                    diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_WIN;
+                    diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_WINS;
                 if (nbFail <= 3)
-                    diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_FAIL;
-
+                    diffParams.LogRegError = DDALogRegError.NOT_ENOUGH_FAILS;
             }
         }
 
@@ -209,67 +199,10 @@ public class DDAModel {
                 LRAccuracy /= 10;
 
                 LRAccuracyUpToDate = true;
-                
+
                 //Using all data to update model
                 LogReg = LogisticRegression.ComputeModel(data);
                 diffParams.NbAttemptsUsedToCompute = data.DepVar.Length;
-
-                if (!LogReg.isUsable())
-                {
-                    LRAccuracy = 0;
-                    diffParams.LogRegError = DDALogRegError.NEWTON_RAPHSON_ERROR;
-                }                    
-                else
-                {
-                    //Verifying if LogReg is ok : must be able to work in both ways 
-                    double errorSum = 0;
-                    double diffTest = 0.1;
-                    double[] pars = new double[1];
-                    double[] parsForAllDiff = new double[10];
-                    string res = "";
-                    for (int i = 0; i < 8; i++)
-                    {
-                        pars[0] = LogReg.InvPredict(diffTest, pars, 0); //on regarde que la première variable.
-                        parsForAllDiff[i] = pars[0];
-                        res = "D = " + diffTest + " par = " + pars[0];
-                        errorSum += System.Math.Abs(diffTest - LogReg.Predict(pars)); //On passe dans les deux sens on doit avoir pareil
-                        res += " res = " + LogReg.Predict(pars) + "\n";
-                        diffTest += 0.1;
-                        //Debug.Log(res);
-                    }
-
-                    if (errorSum > 1 || double.IsNaN(errorSum))
-                    {
-                        Debug.Log("Model is not solid, error = " + errorSum);
-                        LRAccuracy = 0;
-                        if (errorSum > 1)
-                            diffParams.LogRegError = DDALogRegError.INV_PRED_ERROR_TOO_HIGH;
-                        if(double.IsNaN(errorSum))
-                            diffParams.LogRegError = DDALogRegError.INV_PRED_ERROR_NAN;
-                    }
-
-                    //Verifying if LogReg is ok : sd of diff predictions in all theta range must not be 0
-                    double mean = 0;
-                    for (int i = 0; i < 8; i++)
-                        mean += parsForAllDiff[i];
-                    mean /= 8;
-                    double sd = 0;
-                    for (int i = 0; i < 8; i++)
-                        sd += (parsForAllDiff[i] - mean) * (parsForAllDiff[i] - mean);
-                    sd = System.Math.Sqrt(sd);
-
-                    //Debug.Log("Model parameter estimation sd = " + sd);
-
-                    if (sd < 0.05 || double.IsNaN(sd))
-                    {
-                        Debug.Log("Model parameter estimation is always the same : sd=" + sd);
-                        LRAccuracy = 0;
-                        if (sd < 0.05)
-                            diffParams.LogRegError = DDALogRegError.SD_PREDICTIONS_TOO_LOW;
-                        if (double.IsNaN(sd))
-                            diffParams.LogRegError = DDALogRegError.SD_PREDICTIONS_NAN;
-                    }
-                }
             }
             else
             {
@@ -280,20 +213,78 @@ public class DDAModel {
 
             if (LRAccuracy < LRMinimalAccuracy)
             {
-                Debug.Log("LogReg accuracy is under "+ LRMinimalAccuracy + ", not using LogReg");
+                Debug.Log("LogReg accuracy is under " + LRMinimalAccuracy + ", not using LogReg");
                 diffParams.LogRegReady = false;
                 diffParams.LogRegError = DDALogRegError.ACCURACY_TOO_LOW;
             }
+
+            if (!LogReg.isUsable())
+            {
+                LRAccuracy = 0;
+                diffParams.LogRegError = DDALogRegError.NEWTON_RAPHSON_ERROR;
+            }
+            else if (diffParams.LogRegReady)
+            {   
+                //Verifying if LogReg is ok : must be able to work in both ways 
+                double errorSum = 0;
+                double diffTest = 0.1;
+                double[] pars = new double[1];
+                double[] parsForAllDiff = new double[10];
+                string res = "";
+                for (int i = 0; i < 8; i++)
+                {
+                    pars[0] = LogReg.InvPredict(diffTest, pars, 0); //on regarde que la première variable.
+                    parsForAllDiff[i] = pars[0];
+                    res = "D = " + diffTest + " par = " + pars[0];
+                    errorSum += System.Math.Abs(diffTest - LogReg.Predict(pars)); //On passe dans les deux sens on doit avoir pareil
+                    res += " res = " + LogReg.Predict(pars) + "\n";
+                    diffTest += 0.1;
+                    //Debug.Log(res);
+                }
+
+                if (errorSum > 1 || double.IsNaN(errorSum))
+                {
+                    Debug.Log("Model is not solid, error = " + errorSum);
+                    LRAccuracy = 0;
+                    if (errorSum > 1)
+                        diffParams.LogRegError = DDALogRegError.SUM_ERROR_TOO_HIGH;
+                    if (double.IsNaN(errorSum))
+                        diffParams.LogRegError = DDALogRegError.SUM_ERROR_IS_NAN;
+                }
+
+                //Verifying if LogReg is ok : sd of diff predictions in all theta range must not be 0
+                double mean = 0;
+                for (int i = 0; i < 8; i++)
+                    mean += parsForAllDiff[i];
+                mean /= 8;
+                double sd = 0;
+                for (int i = 0; i < 8; i++)
+                    sd += (parsForAllDiff[i] - mean) * (parsForAllDiff[i] - mean);
+                sd = System.Math.Sqrt(sd);
+
+                //Debug.Log("Model parameter estimation sd = " + sd);
+
+                if (sd < 0.05 || double.IsNaN(sd))
+                {
+                    Debug.Log("Model parameter estimation is always the same : sd=" + sd);
+                    LRAccuracy = 0;
+
+                    if (sd < 0.05)
+                        diffParams.LogRegError = DDALogRegError.SD_PRED_TOO_LOW;
+                    if (double.IsNaN(sd))
+                        diffParams.LogRegError = DDALogRegError.SD_PRED_IS_NAN;
+                }
+            }
         }
 
-        //Daving params
+        //Saving params
         diffParams.TargetDiff = targetDifficulty;
         diffParams.LRAccuracy = LRAccuracy;
 
         //Determining theta
 
         //If we want pmdelta or we want log reg but it's not available
-        if ((Algorithm == DDAAlgorithm.DDA_LOGREG && !diffParams.LogRegReady) || 
+        if ((Algorithm == DDAAlgorithm.DDA_LOGREG && !diffParams.LogRegReady) ||
              Algorithm == DDAAlgorithm.DDA_PMDELTA)
         {
             double delta = PMWonLastTime ? PMDeltaValue : -PMDeltaValue;
@@ -317,7 +308,7 @@ public class DDAModel {
         }
 
         //if we want log reg and it's available
-        if (Algorithm == DDAAlgorithm.DDA_LOGREG && diffParams.LogRegReady) 
+        if (Algorithm == DDAAlgorithm.DDA_LOGREG && diffParams.LogRegReady)
         {
             diffParams.TargetDiffWithExplo = targetDifficulty + Random.Range(-LRExplo, LRExplo);
             diffParams.TargetDiffWithExplo = System.Math.Min(1.0, System.Math.Max(0, diffParams.TargetDiffWithExplo));
@@ -325,11 +316,20 @@ public class DDAModel {
             diffParams.AlgorithmActuallyUsed = DDAAlgorithm.DDA_LOGREG;
         }
 
-        //If we want random
-        if (Algorithm == DDAAlgorithm.DDA_RANDOM)
+        //if we want random log reg and it's available
+        if (Algorithm == DDAAlgorithm.DDA_RANDOM_LOGREG && diffParams.LogRegReady)
         {
-            diffParams.Theta = Random.Range(0.0f,1.0f);
-            diffParams.AlgorithmActuallyUsed = DDAAlgorithm.DDA_RANDOM;
+            diffParams.TargetDiff = Random.Range(0.0f, 1.0f);
+            diffParams.TargetDiffWithExplo = diffParams.TargetDiff; //Pas d'explo on est en random
+            diffParams.Theta = LogReg.InvPredict(1.0 - diffParams.TargetDiffWithExplo);
+            diffParams.AlgorithmActuallyUsed = DDAAlgorithm.DDA_RANDOM_LOGREG;
+        }
+
+        //If we want random
+        if (Algorithm == DDAAlgorithm.DDA_RANDOM_THETA || (Algorithm == DDAAlgorithm.DDA_RANDOM_LOGREG && !diffParams.LogRegReady))
+        {
+            diffParams.Theta = Random.Range(0.0f, 1.0f);
+            diffParams.AlgorithmActuallyUsed = DDAAlgorithm.DDA_RANDOM_THETA;
 
             //If regression is okay, we can tell the difficulty for this theta
             if (diffParams.LogRegReady)
@@ -347,10 +347,10 @@ public class DDAModel {
         }
 
         //Save betas if we have some
-        if(LogReg != null && LogReg.Betas != null && LogReg.Betas.Length > 0)
+        if (LogReg != null && LogReg.Betas != null && LogReg.Betas.Length > 0)
         {
             diffParams.Betas = new double[LogReg.Betas.Length];
-            for (int i=0;i< LogReg.Betas.Length; i++)
+            for (int i = 0; i < LogReg.Betas.Length; i++)
                 diffParams.Betas[i] = LogReg.Betas[i];
         }
 
@@ -367,11 +367,11 @@ public class DDAModel {
 
         bool isSame = true;
         int nbCheck = 0;
-        for(int i=0;i<attempts.Count;i++)
+        for (int i = 0; i < attempts.Count; i++)
         {
             if (i >= attempts.Count - LRNbLastAttemptsToConsider)
             {
-                if (!attempts[i].IsSame(attemptsSaved[i- (attempts.Count-LRNbLastAttemptsToConsider)]))
+                if (!attempts[i].IsSame(attemptsSaved[i - (attempts.Count - LRNbLastAttemptsToConsider)]))
                 {
                     Debug.LogError("Attempt " + i + " is corrupted");
                     isSame = false;
@@ -381,11 +381,10 @@ public class DDAModel {
 
         }
 
-        if(isSame)
-            Debug.Log("Data is ok, checked "+ nbCheck + " attempts (cache size)");
+        if (isSame)
+            Debug.Log("Data is ok, checked " + nbCheck + " attempts (cache size)");
 
         return isSame;
 
     }
 }
-

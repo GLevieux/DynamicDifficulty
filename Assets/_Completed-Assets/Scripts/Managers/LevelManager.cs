@@ -5,14 +5,15 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class LevelManager : MonoBehaviour {
+public class LevelManager : MonoBehaviour
+{
 
     public Transform tankPrefab;
     public Transform[] spawnPositions;
 
     Transform player;
     Transform[] ennemies;
-    
+
     public DDAModelUnityBridge DDAModelManager;
 
     [System.Serializable]
@@ -45,17 +46,29 @@ public class LevelManager : MonoBehaviour {
 
     bool explained = false;
     bool explaining = false;
+    bool expLogReg = false;
     bool firstLevel = true;
     bool logged = false;
-
-    int TutorialLevel = 0;
-    int MaxLevel = 15;
+    bool ask = true;
+    int NbLevelTuto = 15;
+    int NbLevelRandom = 35;
 
     GameObject question;
     GameObject Explication;
+    GameObject ExpLogReg;
     GameObject Map;
 
     public Transform AimCursor;
+
+    IEnumerator deuxSecTimer()
+    {
+        yield return new WaitForSeconds(2);
+        Cursor.visible = true;
+        AimCursor.gameObject.SetActive(false);
+        question.SetActive(true);
+
+
+    }
 
     IEnumerator explication()
     {
@@ -69,13 +82,25 @@ public class LevelManager : MonoBehaviour {
         yield return new WaitForSeconds(2);
         explained = true;
     }
+
+    IEnumerator explicationLogReg()
+    {
+        expLogReg = true;
+        explaining = true;
+        TWin.enabled = false;
+        TFail.enabled = false;
+        Map.SetActive(false);
+        Cursor.visible = true;
+        AimCursor.gameObject.SetActive(false);
+        ExpLogReg.SetActive(true);
+        yield return new WaitForSeconds(2);
+    }
         IEnumerator nextLevel()
     {
+        questionAnswered = false;
         logged = false;
         win = false;
         CompteARebours.enabled = false;
-        questionAnswered = false;
-        question.SetActive(false);
         waitingForNewLevel = true;
         CompteARebours.enabled = true;
         CompteARebours.text = "3";
@@ -94,7 +119,7 @@ public class LevelManager : MonoBehaviour {
     void destroyLevel()
     {
         if (player)
-        { 
+        {
             Destroy(player.gameObject);
             for (int i = 0; i < ennemies.Length; i++)
             {
@@ -103,12 +128,9 @@ public class LevelManager : MonoBehaviour {
         }
 
     }
-    
+
     void createLevel(float difficulty)
     {
-        
-        
-
         paramsDiff currentDiff;
         currentDiff.nbEnnemies = Mathf.RoundToInt(Mathf.Lerp((float)easyDiff.nbEnnemies, (float)hardDiff.nbEnnemies, difficulty));
         currentDiff.speedTurn = Mathf.Lerp(easyDiff.speedTurn, hardDiff.speedTurn, difficulty);
@@ -134,7 +156,7 @@ public class LevelManager : MonoBehaviour {
     void setupTank(Transform tank, float patateColor, int num)
     {
         MeshRenderer[] renderers = tank.GetComponentsInChildren<MeshRenderer>();
-        
+
         // Go through all the renderers...
         Color color = Color.HSVToRGB(patateColor, patateColor, patateColor);
         for (int i = 0; i < renderers.Length; i++)
@@ -161,10 +183,13 @@ public class LevelManager : MonoBehaviour {
 
 
     // Use this for initialization
-    void Start() {
+    void Start()
+    {
         Map = GameObject.Find("Map");
         Explication = GameObject.Find("Explication");
         Explication.SetActive(false);
+        ExpLogReg = GameObject.Find("ExpLogReg");
+        ExpLogReg.SetActive(false);
         question = GameObject.Find("Question");
         question.SetActive(false);
 
@@ -177,7 +202,7 @@ public class LevelManager : MonoBehaviour {
             DDAModelManager.setPlayerAge(pm.GetComponent<PlayerManager>().PlayerAge);
             DDAModelManager.setPlayerGender(pm.GetComponent<PlayerManager>().PlayerGender);
         }
-        
+
         DDAModelManager.setChallengeId("Tank");
         destroyLevel();
 
@@ -190,6 +215,9 @@ public class LevelManager : MonoBehaviour {
             b.onClick.AddListener(delegate { ClickButton(b); });
         Button BValider = Explication.GetComponentInChildren<Button>();
         BValider.onClick.AddListener(delegate { ClickButton(BValider); });
+
+        Button BValider2 = ExpLogReg.GetComponentInChildren<Button>();
+        BValider2.onClick.AddListener(delegate { ClickButton(BValider2); });
 
         Score = 0;
     }
@@ -213,14 +241,15 @@ public class LevelManager : MonoBehaviour {
 
     void updateScoreLabel()
     {
-        TScore.text = "Level:" + numLevel + "\n" + "Score:" + (Score); 
+        TScore.text = "Level:" + numLevel + "\n" + "Score:" + (Score);
     }
 
     // Update is called once per frame
-    void Update() {
+    void Update()
+    {
         if (waitingForNewLevel)
             return;
-        
+
         bool end = false;
         bool alldead = false;
         if (player == null || !player.gameObject.activeSelf)
@@ -232,14 +261,14 @@ public class LevelManager : MonoBehaviour {
             {
                 if (ennemies[i].gameObject.activeSelf)
                     alldead = false;
-                
+
 
             }
             if (alldead)
                 end = true;
         }
 
-        
+
 
 
         /**
@@ -258,16 +287,25 @@ public class LevelManager : MonoBehaviour {
 
             destroyLevel();
 
-            
-            
+
+
             if (!logged)
             {
-                if (TutorialLevel >= MaxLevel - 1 && !explained)
+                ask = true;
+                DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
+                if (numLevel >= NbLevelTuto - 1 && !explained)
                     StartCoroutine("explication");
-                if (TutorialLevel >= MaxLevel)
-                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_RANDOM);
-                else
-                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
+                if (numLevel > NbLevelTuto)
+                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_RANDOM_LOGREG);
+                if (numLevel > NbLevelRandom)
+                {
+                    if (!expLogReg)
+                    {
+                        StartCoroutine("explicationLogReg");
+                    }
+                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_LOGREG);
+                    answer = -10;
+                }
 
                 if (win)
                     Score++;
@@ -276,18 +314,22 @@ public class LevelManager : MonoBehaviour {
                 {
                     betas = lastDiffParams.Betas;
                 }
-                this.log(DDAModelManager.getPlayerId(),
-                    betas[0],
-                    betas[1],
-                    lastDiffParams.LRAccuracy,
-                    lastDiffParams.LogRegError.ToString(),
-                    lastDiffParams.AlgorithmActuallyUsed.ToString(),
-                    (float)lastDiffParams.TargetDiff,
-                    (float)lastDiffParams.Theta,
-                    win,
-                    answer,
-                    DDAModelManager.getPlayerAge(),
-                    DDAModelManager.getPlayerGender());
+                if(DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_LOGREG || DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA || (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_RANDOM_LOGREG && firstLevel))
+                {
+                    this.log(DDAModelManager.getPlayerId(),
+                        betas[0],
+                        betas[1],
+                        lastDiffParams.LRAccuracy,
+                        lastDiffParams.LogRegError.ToString(),
+                        lastDiffParams.AlgorithmActuallyUsed.ToString(),
+                        (float)lastDiffParams.TargetDiff,
+                        (float)lastDiffParams.Theta,
+                        win,
+                        answer,
+                        DDAModelManager.getPlayerAge(),
+                        DDAModelManager.getPlayerGender());
+                }
+                
                 logged = true;
 
 
@@ -303,34 +345,49 @@ public class LevelManager : MonoBehaviour {
                 DDAModelManager.addLastAttempt(lastAttempt);
 
             }
-            if (numLevel >= 62)
-                SceneManager.LoadScene(2);
+            
 
             if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA && !explaining)//!GDiffManager.isUsingLRModel())
             {
-                TutorialLevel++;
                 lastDiffParams = DDAModelManager.computeNewDiffParams();
                 nextDifficulty = (float)lastDiffParams.Theta;
                 numLevel++;
                 StartCoroutine("nextLevel");
             }
-            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_RANDOM && !explaining)
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_RANDOM_LOGREG && !explaining)
             {
                 if (!firstLevel)
                 {
-                    Cursor.visible = true;
-                    AimCursor.gameObject.SetActive(false);
-                    question.SetActive(true);
+                    if (ask)
+                    {
+                        ask = false;
+                        StartCoroutine("deuxSecTimer");
+                    }
                     if (questionAnswered)
                     {
-                        Cursor.visible = false;
-                        AimCursor.gameObject.SetActive(true);
+                        double[] betas = new double[2];
+                        if (lastDiffParams.Betas != null && lastDiffParams.Betas.Length > 0)
+                        {
+                            betas = lastDiffParams.Betas;
+                        }
+                        this.log(DDAModelManager.getPlayerId(),
+                            betas[0],
+                            betas[1],
+                            lastDiffParams.LRAccuracy,
+                            lastDiffParams.LogRegError.ToString(),
+                            lastDiffParams.AlgorithmActuallyUsed.ToString(),
+                            (float)lastDiffParams.TargetDiff,
+                            (float)lastDiffParams.Theta,
+                            win,
+                            answer,
+                            DDAModelManager.getPlayerAge(),
+                            DDAModelManager.getPlayerGender());
 
-                            
                         lastDiffParams = DDAModelManager.computeNewDiffParams();
                         nextDifficulty = (float)lastDiffParams.Theta;
                         numLevel++;
-                        StartCoroutine("nextLevel");
+                        if (numLevel < 62)
+                            StartCoroutine("nextLevel");
                     }
                 }
                 else
@@ -339,9 +396,18 @@ public class LevelManager : MonoBehaviour {
                     lastDiffParams = DDAModelManager.computeNewDiffParams();
                     nextDifficulty = (float)lastDiffParams.Theta;
                     numLevel++;
-                    StartCoroutine("nextLevel");
                 }
             }
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_LOGREG && !explaining)
+            {
+                lastDiffParams = DDAModelManager.computeNewDiffParams(0.2f);//0.2 0.5 0.7
+                nextDifficulty = (float)lastDiffParams.Theta; ;
+                numLevel++;
+                StartCoroutine("nextLevel");
+            }
+
+            if (numLevel >= 62)
+                SceneManager.LoadScene(2);
         }
     }
 
@@ -371,7 +437,7 @@ public class LevelManager : MonoBehaviour {
             sw = new StreamWriter(ofs);
 
             string dateTime = System.DateTime.Now.ToString("yyyy/MM/dd hh:mm:ss");
-            sw.Write(dateTime+";");
+            sw.Write(dateTime + ";");
             sw.Write(beta0 + ";");
             sw.Write(beta1 + ";");
             sw.Write(accuracy + ";");
@@ -418,9 +484,17 @@ public class LevelManager : MonoBehaviour {
             Explication.SetActive(false);
             Map.SetActive(true);
             explaining = false;
-            Cursor.visible = false;
-            AimCursor.gameObject.SetActive(true);
         }
+        else if (B.name == "BValider2")
+        {
+            ExpLogReg.SetActive(false);
+            Map.SetActive(true);
+            explaining = false;
+        }
+
+        Cursor.visible = false;
+        AimCursor.gameObject.SetActive(true);
+        question.SetActive(false);
 
     }
 }
