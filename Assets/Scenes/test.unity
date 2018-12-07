@@ -2469,6 +2469,13 @@ MonoBehaviour:
   TWin: {fileID: 159032399}
   TFail: {fileID: 1562656394}
   CompteARebours: {fileID: 1240650489}
+  DifficultyCurve:
+    DiffStepsPlaying:
+    - 0.2
+    - 0.2
+    - 0.2
+    - 0.5
+    - 0.7
   AimCursor: {fileID: 278242490}
 --- !u!4 &1393233985 stripped
 Transform:

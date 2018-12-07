@@ -17,6 +17,27 @@ public class LevelManager : MonoBehaviour
     public DDAModelUnityBridge DDAModelManager;
 
     [System.Serializable]
+    public class DiffCurve
+    {
+        [Range(0, 1)]
+        public float[] DiffStepsPlaying;
+
+        public float getDifficulty(int step)
+        {
+            if (DiffStepsPlaying == null)
+                return 0;
+
+            while (step >= DiffStepsPlaying.Length)
+                step -= DiffStepsPlaying.Length;
+
+            if (DiffStepsPlaying != null && step < DiffStepsPlaying.Length)
+                return DiffStepsPlaying[step];
+
+            return 0;
+        }
+    }
+
+    [System.Serializable]
     public struct paramsDiff
     {
         public int nbEnnemies;
@@ -38,6 +59,9 @@ public class LevelManager : MonoBehaviour
     private float nextDifficulty = 0;
     private bool waitingForNewLevel = true;
     private int numLevel = 0;
+    private int numLevelLogReg = 0;
+
+    public DiffCurve DifficultyCurve;
 
     private int Score = 0;
     float answer = -10;
@@ -292,20 +316,11 @@ public class LevelManager : MonoBehaviour
             if (!logged)
             {
                 ask = true;
-                DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_PMDELTA);
                 if (numLevel >= NbLevelTuto - 1 && !explained)
                     StartCoroutine("explication");
-                if (numLevel > NbLevelTuto)
+                if (numLevel > NbLevelTuto && numLevel < NbLevelRandom)
                     DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_RANDOM_LOGREG);
-                if (numLevel > NbLevelRandom)
-                {
-                    if (!expLogReg)
-                    {
-                        StartCoroutine("explicationLogReg");
-                    }
-                    DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_LOGREG);
-                    answer = -10;
-                }
+               
 
                 if (win)
                     Score++;
@@ -347,7 +362,7 @@ public class LevelManager : MonoBehaviour
             }
             
 
-            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA && !explaining)//!GDiffManager.isUsingLRModel())
+            if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_PMDELTA && !explaining)
             {
                 lastDiffParams = DDAModelManager.computeNewDiffParams();
                 nextDifficulty = (float)lastDiffParams.Theta;
@@ -386,7 +401,16 @@ public class LevelManager : MonoBehaviour
                         lastDiffParams = DDAModelManager.computeNewDiffParams();
                         nextDifficulty = (float)lastDiffParams.Theta;
                         numLevel++;
-                        if (numLevel < 62)
+                        if (numLevel > NbLevelRandom)
+                        {
+                            if (!expLogReg)
+                            {
+                                StartCoroutine("explicationLogReg");
+                            }
+                            DDAModelManager.setDDAAlgorithm(DDAModel.DDAAlgorithm.DDA_LOGREG);
+                            answer = -10;
+                        }
+                        else
                             StartCoroutine("nextLevel");
                     }
                 }
@@ -400,13 +424,14 @@ public class LevelManager : MonoBehaviour
             }
             if (DDAModelManager.getDDAAlgorithm() == DDAModel.DDAAlgorithm.DDA_LOGREG && !explaining)
             {
-                lastDiffParams = DDAModelManager.computeNewDiffParams(0.2f);//0.2 0.5 0.7
+                lastDiffParams = DDAModelManager.computeNewDiffParams(DifficultyCurve.getDifficulty(numLevelLogReg));//0.2 0.5 0.7
                 nextDifficulty = (float)lastDiffParams.Theta; ;
                 numLevel++;
+                numLevelLogReg++;
                 StartCoroutine("nextLevel");
             }
 
-            if (numLevel >= 62)
+            if (numLevel >= 100)
                 SceneManager.LoadScene(2);
         }
     }
