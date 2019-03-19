@@ -1,10 +1,11 @@
----
+--
 title: "Tank Shooting Game"
 output: html_document
 ---
 ```{r include = FALSE}
 #install.packages("data.table")
 #install.packages("ggplot2")
+#install.packages("lme4")
 
 require(data.table)
 require(ggplot2)
@@ -216,6 +217,8 @@ sdAge = sd(DStatsPlayer$age)
 meanTime = mean(DStatsPlayer$time)
 sdTime = sd(DStatsPlayer$time)
 nbPlayers = nrow(DTGame[used.Model == 0,.N, by = idPlayer])
+meanLevel = mean(DTVarModel$niveau)
+sdLevel = sd(DTVarModel$niveau)
 
 nbOutliersVariation = 0
 nbOutliersNiveau = 0
@@ -431,7 +434,7 @@ print(hist(DTLevel$beta0))
 ```
 
 
-We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes). Une fois les outliers enlevé, et quand on utilise le modele, l'accuracy est en moyenne de `r meanaccuracy`(sd = `r sdaccuracy`). L'accuracy du modele est passée sous le seuil d'utilisabilité pour `r nb.players.switchback` participants. Moyenne switch back `r nb.switch.back.mean` sd switch back `r nb.switch.back.sd`
+We tested `r nbPlayers` players : `r nbHommes` hommes et `r nbFemmes` femmes avec un age moyen de `r meanAge` (sd=`r sdAge`). On a retire `r nbOutliersVariation` outliers pour la variation du modèle et `r nbOutliersNiveau` outliers pour le niveau pour un total de `r nbTotalOutliers` outliers. For these players, the model took in average `r meanStepsConverge` steps to converge (sd = `r sdStepsConverge`) soit `r meanTimeConv` secondes ( `r meanTimeConv/60` minutes, sd = `r sdTimeConv` sec). En moyenne les joueurs on joué `r meanTime` secondes (`r meanTime/60` minutes, sd = `r sdTime` secondes). Une fois les outliers enlevé, et quand on utilise le modele, l'accuracy est en moyenne de `r meanaccuracy`(sd = `r sdaccuracy`). L'accuracy du modele est passée sous le seuil d'utilisabilité pour `r nb.players.switchback` participants. Moyenne switch back `r nb.switch.back.mean` sd switch back `r nb.switch.back.sd`. Les joueurs ont un niveau moyen de `r meanLevel` (sd = `r sdLevel`)
 
 Target Diff|Actual Target Diff  |Target Diff SD  | Param           |  p(fail)       |  delta                         | n
 -----------|------------------------------------ | ----------------|--------------  | ------------------------------ |------
